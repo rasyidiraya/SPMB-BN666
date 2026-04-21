@@ -30,7 +30,7 @@
                                         @foreach($jurusan as $item)
                                         @php
                                             $jumlahPendaftar = \App\Models\Pendaftar\Pendaftar::where('jurusan_id', $item->id)
-                                                ->whereIn('status', ['ADM_PASS', 'PAYMENT_PENDING', 'PAID'])
+                                                ->where('status', 'PAID')
                                                 ->count();
                                         @endphp
                                         <tr>

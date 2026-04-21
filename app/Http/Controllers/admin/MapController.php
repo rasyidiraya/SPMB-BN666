@@ -10,6 +10,7 @@ use App\Models\Pendaftar\Jurusan;
 
 class MapController extends Controller
 {
+    // Tampilkan halaman peta sebaran pendaftar
     public function index()
     {
         $gelombang = Gelombang::all() ?? collect();
@@ -18,8 +19,10 @@ class MapController extends Controller
         return view('admin.map', compact('gelombang', 'jurusan'));
     }
     
+    // Ambil data marker peta (lokasi + jumlah pendaftar per wilayah)
     public function mapData(Request $request)
     {
+        // Query data pendaftar berdasarkan wilayah
         $query = DB::table('pendaftar')
             ->leftJoin('pendaftar_data_siswa', 'pendaftar.id', '=', 'pendaftar_data_siswa.pendaftar_id')
             ->leftJoin('wilayah', 'pendaftar_data_siswa.wilayah_id', '=', 'wilayah.id')
@@ -32,20 +35,24 @@ class MapController extends Controller
             )
             ->groupBy('wilayah.provinsi', 'wilayah.kabupaten', 'wilayah.kecamatan', 'pendaftar.status');
             
+        // Filter berdasarkan gelombang
         if ($request->gelombang) {
             $query->where('pendaftar.gelombang_id', $request->gelombang);
         }
         
+        // Filter berdasarkan jurusan
         if ($request->jurusan) {
             $query->where('pendaftar.jurusan_id', $request->jurusan);
         }
         
+        // Filter berdasarkan status
         if ($request->status) {
             $query->where('pendaftar.status', $request->status);
         }
         
         $data = $query->get();
         
+        // Kelompokkan data per wilayah dan beri koordinat
         $grouped = [];
         foreach ($data as $item) {
             $key = $item->provinsi . '|' . $item->kabupaten . '|' . $item->kecamatan;
@@ -83,6 +90,7 @@ class MapController extends Controller
         ]);
     }
     
+    // Ambil koordinat latitude/longitude berdasarkan nama kabupaten
     private function getCoordinates($kabupaten)
     {
         $coordinates = [
@@ -137,10 +145,12 @@ class MapController extends Controller
         
         $kabupaten = trim($kabupaten);
         
+        // Cari koordinat yang cocok
         if (isset($coordinates[$kabupaten])) {
             return $coordinates[$kabupaten];
         }
         
+        // Coba cari tanpa prefix "Kota" / "Kabupaten"
         $cleanName = preg_replace('/^(Kota|Kabupaten)\s+/i', '', $kabupaten);
         foreach ($coordinates as $key => $coord) {
             if (stripos($key, $cleanName) !== false) {
@@ -148,9 +158,11 @@ class MapController extends Controller
             }
         }
         
+        // Default: Jakarta kalau tidak ketemu
         return ['lat' => -6.2088, 'lng' => 106.8456];
     }
     
+    // Ambil data detail pendaftar per wilayah untuk tabel
     private function getDetailedStats($request)
     {
         $query = DB::table('pendaftar')

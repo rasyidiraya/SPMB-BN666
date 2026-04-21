@@ -12,16 +12,17 @@ use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
+    // Tampilkan dashboard kepala sekolah (ringkasan statistik SPMB)
     public function index()
     {
         try {
-            // KPI Ringkas
+            // Hitung KPI ringkas
             $totalPendaftar = Pendaftar::count();
             $totalKuota = Jurusan::sum('kuota') ?? 0;
             $rasioTerverifikasi = Pendaftar::whereIn('pendaftar.status', ['ADM_PASS', 'PAID'])->count();
             $persentaseKuota = $totalKuota > 0 ? round(($totalPendaftar / $totalKuota) * 100, 1) : 0;
             
-            // Tren Harian (7 hari terakhir) - buat data untuk semua 7 hari
+            // Hitung tren harian (7 hari terakhir)
             $trenHarian = collect();
             for ($i = 6; $i >= 0; $i--) {
                 $date = Carbon::now()->subDays($i)->toDateString();
@@ -32,7 +33,7 @@ class DashboardController extends Controller
                 ]);
             }
 
-            // Komposisi per Jurusan
+            // Ambil komposisi pendaftar per jurusan
             $komposisiJurusan = Jurusan::withCount('pendaftar')
                 ->get()
                 ->map(function($item) {
@@ -44,7 +45,7 @@ class DashboardController extends Controller
                     ];
                 });
 
-            // Status Verifikasi - pastikan semua status ada
+            // Hitung jumlah per status verifikasi
             $statusCounts = Pendaftar::select('pendaftar.status', DB::raw('COUNT(*) as jumlah'))
                 ->groupBy('pendaftar.status')
                 ->pluck('jumlah', 'pendaftar.status');
@@ -63,7 +64,7 @@ class DashboardController extends Controller
                 return [$label => $statusCounts->get($status, 0)];
             });
 
-            // Komposisi Asal Sekolah (Top 5)
+            // Ambil top 5 asal sekolah
             $asalSekolah = PendaftarAsalSekolah::select('nama_sekolah', DB::raw('COUNT(*) as jumlah'))
                 ->whereNotNull('nama_sekolah')
                 ->groupBy('nama_sekolah')
@@ -71,7 +72,7 @@ class DashboardController extends Controller
                 ->limit(5)
                 ->get();
 
-            // Komposisi Wilayah
+            // Ambil top 5 wilayah asal
             $wilayah = PendaftarAsalSekolah::select('kabupaten as wilayah', DB::raw('COUNT(*) as jumlah'))
                 ->whereNotNull('kabupaten')
                 ->groupBy('kabupaten')
@@ -86,7 +87,7 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error in Kepsek Dashboard: ' . $e->getMessage());
             
-            // Return with default empty data if error occurs
+            // Kalau error, tampilkan halaman dengan data kosong
             return view('kepsek.dashboard', [
                 'totalPendaftar' => 0,
                 'totalKuota' => 0,

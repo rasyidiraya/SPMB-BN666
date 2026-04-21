@@ -12,12 +12,13 @@ use Illuminate\Support\Facades\DB;
 
 class LaporanController extends Controller
 {
+    // Tampilkan halaman laporan verifikasi dengan statistik ringkas
     public function index()
     {
         $jurusan = Jurusan::all();
         $gelombang = Gelombang::all();
         
-        // Statistik ringkas
+        // Hitung statistik ringkas
         $stats = [
             'total_pendaftar' => DB::table('pendaftar')->count(),
             'menunggu_verifikasi' => DB::table('pendaftar')->where('pendaftar.status', 'SUBMIT')->count(),
@@ -28,8 +29,10 @@ class LaporanController extends Controller
         return view('verifikator-administrasi.laporan.index', compact('jurusan', 'gelombang', 'stats'));
     }
 
+    // Export data laporan verifikasi ke file CSV
     public function export(Request $request)
     {
+        // Ambil data pendaftar dengan filter
         $query = DB::table('pendaftar')
             ->join('pendaftar_data_siswa', 'pendaftar.id', '=', 'pendaftar_data_siswa.pendaftar_id')
             ->join('jurusan', 'pendaftar.jurusan_id', '=', 'jurusan.id')
@@ -47,18 +50,22 @@ class LaporanController extends Controller
             )
             ->whereIn('pendaftar.status', ['SUBMIT', 'ADM_PASS', 'ADM_REJECT']);
         
+        // Filter berdasarkan jurusan
         if ($request->jurusan_id) {
             $query->where('pendaftar.jurusan_id', $request->jurusan_id);
         }
         
+        // Filter berdasarkan gelombang
         if ($request->gelombang_id) {
             $query->where('pendaftar.gelombang_id', $request->gelombang_id);
         }
         
+        // Filter berdasarkan status
         if ($request->status) {
             $query->where('pendaftar.status', $request->status);
         }
         
+        // Filter berdasarkan rentang tanggal
         if ($request->tanggal_mulai && $request->tanggal_selesai) {
             $query->whereBetween('pendaftar.created_at', [$request->tanggal_mulai, $request->tanggal_selesai]);
         }
@@ -66,9 +73,10 @@ class LaporanController extends Controller
         $data = $query->get();
         
         // Tentukan format export
-        $format = $request->format ?? 'excel';
+        $format = $request->input('format', 'excel');
         
         if ($format === 'excel') {
+            // Buat file CSV untuk didownload
             $filename = 'laporan_verifikasi_' . date('Y-m-d_H-i-s') . '.csv';
             
             $headers = [
@@ -91,7 +99,7 @@ class LaporanController extends Controller
                     'Tanggal Verifikasi Administrasi'
                 ]);
                 
-                // Data rows
+                // Isi data CSV
                 foreach ($data as $pendaftar) {
                     fputcsv($file, [
                         $pendaftar->no_pendaftaran,
@@ -111,7 +119,7 @@ class LaporanController extends Controller
             return response()->stream($callback, 200, $headers);
         }
         
-        // Untuk format PDF, redirect kembali dengan pesan
+        // Untuk format PDF (belum tersedia)
         return redirect()->back()->with('info', 'Export PDF akan segera tersedia.');
     }
 }

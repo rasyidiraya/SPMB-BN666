@@ -10,27 +10,32 @@ use App\Models\LogAktivitas;
 
 class AuthController extends Controller
 {
+    // Tampilkan halaman login
     public function showLogin()
     {
         return view('auth.login');
     }
 
+    // Proses login user
     public function login(Request $request)
     {
+        // Validasi input email & password
         $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required'
         ]);
 
+        // Cari user berdasarkan email
         $user = Pengguna::where('email', $credentials['email'])->first();
-        
+
         if ($user && password_verify($credentials['password'], $user->password_hash)) {
             // Cek apakah user aktif
             if (!$user->aktif) {
                 return back()->withErrors(['email' => 'Akun Anda telah dinonaktifkan. Hubungi administrator.']);
             }
-            // Login dengan guard sesuai role
-            $guard = match($user->role) {
+
+            // Tentukan guard sesuai role user
+            $guard = match ($user->role) {
                 'pendaftar' => 'pengguna',
                 'admin' => 'admin',
                 'verifikator_adm' => 'verifikator',
@@ -38,10 +43,11 @@ class AuthController extends Controller
                 'kepsek' => 'kepsek',
                 default => 'pengguna'
             };
-            
+
+            // Login user
             Auth::guard($guard)->login($user);
-            
-            // Log aktivitas login
+
+            // Catat aktivitas login ke log
             LogAktivitas::create([
                 'user_id' => $user->id,
                 'aksi' => 'login',
@@ -54,9 +60,9 @@ class AuthController extends Controller
                 'waktu' => now(),
                 'ip' => $request->ip()
             ]);
-            
-            // Route berdasarkan role
-            return match($user->role) {
+
+            // Redirect ke dashboard sesuai role
+            return match ($user->role) {
                 'pendaftar' => redirect()->route('pendaftar.dashboard'),
                 'admin' => redirect()->route('admin.dashboard'),
                 'verifikator_adm' => redirect()->route('verifikator.index'),
@@ -69,13 +75,16 @@ class AuthController extends Controller
         return back()->withErrors(['email' => 'Login gagal']);
     }
 
+    // Tampilkan halaman registrasi
     public function showRegistrasi()
     {
         return view('auth.register');
     }
 
+    // Proses registrasi user baru (tanpa OTP)
     public function registrasi(Request $request)
     {
+        // Validasi input form registrasi
         $request->validate([
             'nama' => 'required|string|max:100',
             'email' => 'required|email|unique:pengguna,email',
@@ -83,6 +92,7 @@ class AuthController extends Controller
             'password' => 'required|min:6|confirmed'
         ]);
 
+        // Simpan user baru ke database
         Pengguna::create([
             'nama' => $request->nama,
             'email' => $request->email,
@@ -95,12 +105,13 @@ class AuthController extends Controller
         return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login.');
     }
 
+    // Proses logout user
     public function logout(Request $request)
     {
         // Cek semua guard dan logout dari yang aktif
         $guards = ['pengguna', 'admin', 'verifikator', 'keuangan', 'kepsek'];
         $user = null;
-        
+
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
                 $user = Auth::guard($guard)->user();
@@ -108,9 +119,9 @@ class AuthController extends Controller
                 break;
             }
         }
-        
+
         if ($user) {
-            // Log aktivitas logout
+            // Catat aktivitas logout ke log
             LogAktivitas::create([
                 'user_id' => $user->id,
                 'aksi' => 'logout',
@@ -124,11 +135,11 @@ class AuthController extends Controller
                 'ip' => $request->ip()
             ]);
         }
-        
-        // Hapus session dan invalidate
+
+        // Hapus session
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect()->route('login')->with('logout', true);
     }
 }

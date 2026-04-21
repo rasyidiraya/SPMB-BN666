@@ -14,8 +14,10 @@ use App\Models\LogAktivitas;
 
 class OtpController extends Controller
 {
+    // Fungsi kirim OTP ke email user saat registrasi
     public function sendOtp(Request $request)
     {
+        // Validasi input form
         $request->validate([
             'nama' => 'required|string|max:255',
             'email' => 'required|email|unique:pengguna,email',
@@ -23,25 +25,28 @@ class OtpController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        // Buat kode OTP 6 digit
         $otp = rand(100000, 999999);
         
+        // Simpan data registrasi + OTP ke session (belum ke database)
         Session::put('registration_data', [
             'nama' => $request->nama,
             'email' => $request->email,
             'hp' => $request->hp,
             'password' => Hash::make($request->password),
             'otp' => $otp,
-            'otp_expires' => now()->addMinutes(5)
+            'otp_expires' => now()->addMinutes(5) // Berlaku 5 menit
         ]);
 
         try {
+            // Kirim email OTP ke user
             Mail::send('emails.otp', ['otp' => $otp, 'nama' => $request->nama], function($message) use ($request) {
                 $message->to($request->email)->subject('Kode OTP Registrasi SPMB');
             });
 
             $message = 'Kode OTP telah dikirim ke email Anda';
             
-            // Check if using real SMTP or testing mode
+            // Cek apakah email beneran terkirim atau masih mode testing
             if (config('mail.default') === 'log') {
                 $message = 'Testing Mode - OTP: ' . $otp . ' (Email tidak dikirim, gunakan kode ini)';
             } elseif (config('mail.mailers.smtp.username') === 'ganti-dengan-app-password' || 
@@ -56,15 +61,19 @@ class OtpController extends Controller
         }
     }
 
+    // Fungsi verifikasi kode OTP yang dimasukkan user
     public function verifyOtp(Request $request)
     {
+        // Ambil data registrasi dari session
         $registrationData = Session::get('registration_data');
         
+        // Cek OTP cocok dan belum expired
         if (!$registrationData || $request->otp != $registrationData['otp'] || now()->gt($registrationData['otp_expires'])) {
             return response()->json(['success' => false, 'message' => 'Kode OTP salah atau kedaluwarsa']);
         }
 
         try {
+            // OTP benar, buat akun baru di database
             $user = Pengguna::create([
                 'nama' => $registrationData['nama'],
                 'email' => $registrationData['email'],
@@ -77,7 +86,7 @@ class OtpController extends Controller
             // Auto-login setelah registrasi berhasil
             Auth::guard('pengguna')->login($user);
             
-            // Log aktivitas registrasi dan login
+            // Catat aktivitas registrasi ke log
             LogAktivitas::create([
                 'user_id' => $user->id,
                 'aksi' => 'register_and_login',
@@ -91,7 +100,9 @@ class OtpController extends Controller
                 'ip' => $request->ip()
             ]);
 
+            // Hapus data registrasi dari session
             Session::forget('registration_data');
+
             return response()->json([
                 'success' => true, 
                 'message' => 'Registrasi berhasil! Anda akan diarahkan ke dashboard.',
@@ -103,20 +114,24 @@ class OtpController extends Controller
         }
     }
 
+    // Fungsi kirim ulang OTP kalau user tidak menerima email
     public function resendOtp(Request $request)
     {
+        // Ambil data registrasi dari session
         $registrationData = Session::get('registration_data');
         
         if (!$registrationData) {
             return response()->json(['success' => false, 'message' => 'Data registrasi tidak ditemukan']);
         }
 
+        // Buat kode OTP baru, timpa yang lama
         $otp = rand(100000, 999999);
         $registrationData['otp'] = $otp;
         $registrationData['otp_expires'] = now()->addMinutes(5);
         Session::put('registration_data', $registrationData);
 
         try {
+            // Kirim ulang email OTP
             Mail::send('emails.otp', ['otp' => $otp, 'nama' => $registrationData['nama']], function($message) use ($registrationData) {
                 $message->to($registrationData['email'])->subject('Kode OTP Registrasi SPMB (Kirim Ulang)');
             });

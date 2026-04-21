@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class WilayahController extends Controller
 {
+    // Ambil daftar provinsi (untuk dropdown)
     public function getProvinsi()
     {
         $provinsi = DB::table('wilayah')
@@ -19,6 +20,7 @@ class WilayahController extends Controller
         return response()->json($provinsi);
     }
     
+    // Ambil daftar kabupaten berdasarkan provinsi
     public function getKabupaten($provinsi)
     {
         $kabupaten = DB::table('wilayah')
@@ -31,6 +33,7 @@ class WilayahController extends Controller
         return response()->json($kabupaten);
     }
     
+    // Ambil daftar kecamatan berdasarkan provinsi & kabupaten
     public function getKecamatan($provinsi, $kabupaten)
     {
         $kecamatan = DB::table('wilayah')
@@ -44,6 +47,7 @@ class WilayahController extends Controller
         return response()->json($kecamatan);
     }
     
+    // Ambil daftar kelurahan beserta kodepos berdasarkan provinsi, kabupaten & kecamatan
     public function getKelurahan($provinsi, $kabupaten, $kecamatan)
     {
         $kelurahan = DB::table('wilayah')

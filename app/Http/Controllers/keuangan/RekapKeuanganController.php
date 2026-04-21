@@ -8,9 +8,10 @@ use Illuminate\Support\Facades\DB;
 
 class RekapKeuanganController extends Controller
 {
+    // Tampilkan halaman rekap keuangan (ringkasan per gelombang & per jurusan)
     public function index(Request $request)
     {
-        // Rekap per gelombang
+        // Rekap pemasukan per gelombang
         $rekapGelombang = DB::table('pendaftar')
             ->join('gelombang', 'pendaftar.gelombang_id', '=', 'gelombang.id')
             ->select(
@@ -23,7 +24,7 @@ class RekapKeuanganController extends Controller
             ->groupBy('gelombang.id', 'gelombang.nama', 'gelombang.biaya_daftar')
             ->get();
 
-        // Rekap per jurusan
+        // Rekap pemasukan per jurusan
         $rekapJurusan = DB::table('pendaftar')
             ->join('jurusan', 'pendaftar.jurusan_id', '=', 'jurusan.id')
             ->join('gelombang', 'pendaftar.gelombang_id', '=', 'gelombang.id')
@@ -36,7 +37,7 @@ class RekapKeuanganController extends Controller
             ->groupBy('jurusan.id', 'jurusan.nama')
             ->get();
 
-        // Total keseluruhan
+        // Hitung total keseluruhan
         $totalKeseluruhan = DB::table('pendaftar')
             ->join('gelombang', 'pendaftar.gelombang_id', '=', 'gelombang.id')
             ->selectRaw('
@@ -49,6 +50,7 @@ class RekapKeuanganController extends Controller
         return view('keuangan.rekap.index', compact('rekapGelombang', 'rekapJurusan', 'totalKeseluruhan'));
     }
 
+    // Export rekap keuangan ke file CSV (hanya yang sudah PAID)
     public function exportExcel(Request $request)
     {
         $data = DB::table('pendaftar')

@@ -12,24 +12,26 @@ use App\Models\Pendaftar\PendaftarAsalSekolah;
 
 class DashboardController extends Controller
 {
+    // Tampilkan halaman utama dashboard pendaftar
     public function index()
     {
         return view('Pendaftar.home');
     }
 
+    // Tampilkan form pendaftaran (pre-fill data lama kalau pernah ditolak)
     public function pendaftaran()
     {
         $userId = auth('pengguna')->id();
         $oldData = null;
         
-        // Cek apakah ada data lama yang ditolak
+        // Cek apakah ada pendaftaran yang ditolak sebelumnya
         $existingPendaftar = DB::table('pendaftar')
             ->where('user_id', $userId)
             ->whereIn('status', ['ADM_REJECT', 'PAYMENT_REJECT'])
             ->first();
             
         if ($existingPendaftar) {
-            // Ambil data lama untuk pre-fill form
+            // Ambil data lama untuk mengisi form ulang
             $oldData = DB::table('pendaftar')
                 ->join('pendaftar_data_siswa', 'pendaftar.id', '=', 'pendaftar_data_siswa.pendaftar_id')
                 ->join('pendaftar_data_ortu', 'pendaftar.id', '=', 'pendaftar_data_ortu.pendaftar_id')
@@ -59,9 +61,10 @@ class DashboardController extends Controller
         return view('Pendaftar.pendaftaran', compact('oldData'));
     }
 
+    // Proses simpan data pendaftaran
     public function storePendaftaran(Request $request)
     {
-        // Validasi data
+        // Validasi semua input form
         $request->validate([
             'nama_lengkap' => 'required|string|max:255',
             'nik' => 'required|string|max:16',
@@ -89,7 +92,7 @@ class DashboardController extends Controller
             
             DB::beginTransaction();
             
-            // Generate nomor pendaftaran unik
+            // Generate nomor pendaftaran unik (contoh: SPMB20260001)
             do {
                 $noPendaftaran = 'SPMB' . date('Y') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
             } while (Pendaftar::where('no_pendaftaran', $noPendaftaran)->exists());
@@ -97,13 +100,13 @@ class DashboardController extends Controller
             // Cek apakah user sudah pernah daftar
             $existingPendaftar = Pendaftar::where('user_id', $userId)->first();
             
+            // Tolak kalau sudah daftar dan statusnya bukan ditolak
             if ($existingPendaftar && !in_array($existingPendaftar->status, ['ADM_REJECT', 'PAYMENT_REJECT'])) {
                 return back()->withErrors(['error' => 'Anda sudah terdaftar dan tidak dapat mendaftar ulang.'])->withInput();
             }
             
-            // Hapus data lama jika ditolak, buat baru
+            // Hapus data lama kalau sebelumnya ditolak
             if ($existingPendaftar && in_array($existingPendaftar->status, ['ADM_REJECT', 'PAYMENT_REJECT'])) {
-                // Hapus data terkait
                 DB::table('pendaftar_berkas')->where('pendaftar_id', $existingPendaftar->id)->delete();
                 DB::table('pendaftar_data_siswa')->where('pendaftar_id', $existingPendaftar->id)->delete();
                 DB::table('pendaftar_data_ortu')->where('pendaftar_id', $existingPendaftar->id)->delete();
@@ -111,7 +114,7 @@ class DashboardController extends Controller
                 $existingPendaftar->delete();
             }
             
-            // Simpan data pendaftar baru
+            // Simpan data pendaftar utama
             $pendaftar = Pendaftar::create([
                 'user_id' => $userId,
                 'jurusan_id' => $request->jurusan_id,
@@ -173,7 +176,7 @@ class DashboardController extends Controller
                     'nama_sekolah' => $request->nama_sekolah,
                     'npsn' => $request->npsn,
                     'kabupaten' => $request->kabupaten,
-                    'nilai_rata' => 0.00 // Default nilai rata-rata
+                    'nilai_rata' => 0.00
                 ]
             );
             
@@ -189,6 +192,7 @@ class DashboardController extends Controller
             ->with('success', 'Data pendaftaran berhasil disimpan. Silakan upload berkas persyaratan.');
     }
 
+    // Tampilkan halaman upload berkas
     public function uploadBerkas()
     {
         $userId = auth('pengguna')->id();
@@ -197,9 +201,10 @@ class DashboardController extends Controller
         return view('Pendaftar.upload-berkas', compact('pendaftar'));
     }
 
+    // Proses upload file berkas (ijazah, akta, KK, KIP)
     public function storeUploadBerkas(Request $request)
     {
-        // Validasi file upload
+        // Validasi file upload (max 5MB, format pdf/jpg/jpeg/png)
         $request->validate([
             'ijazah' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB
             'akta' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
@@ -224,7 +229,6 @@ class DashboardController extends Controller
                 return back()->withErrors(['error' => 'Data pendaftaran tidak ditemukan.']);
             }
 
-            // Simpan file ke storage/app/public/berkas
             $berkasData = [];
             
             // Upload Ijazah
@@ -299,10 +303,9 @@ class DashboardController extends Controller
                 }
             }
             
-            // Hapus berkas lama jika ada
+            // Hapus berkas lama kalau ada, lalu insert yang baru
             DB::table('pendaftar_berkas')->where('pendaftar_id', $pendaftar->id)->delete();
             
-            // Insert berkas baru
             if (!empty($berkasData)) {
                 DB::table('pendaftar_berkas')->insert($berkasData);
                 
@@ -318,6 +321,7 @@ class DashboardController extends Controller
             ->with('success', 'Berkas berhasil diupload. Menunggu verifikasi administrator.');
     }
 
+    // Tampilkan halaman status pendaftaran
     public function status()
     {
         $userId = auth('pengguna')->id();
@@ -335,6 +339,7 @@ class DashboardController extends Controller
         return view('Pendaftar.status', compact('pendaftar'));
     }
 
+    // Tampilkan halaman pembayaran
     public function pembayaran()
     {
         $userId = auth('pengguna')->id();
@@ -344,6 +349,7 @@ class DashboardController extends Controller
             ->select('pendaftar.*', 'gelombang.nama as nama_gelombang', 'gelombang.biaya_daftar', 'gelombang.tgl_selesai')
             ->first();
             
+        // Hitung jumlah berkas wajib yang sudah diupload
         $berkasCount = 0;
         if ($pendaftar) {
             $berkasCount = DB::table('pendaftar_berkas')
@@ -355,10 +361,12 @@ class DashboardController extends Controller
         return view('Pendaftar.pembayaran', compact('pendaftar', 'berkasCount'));
     }
 
+    // Proses upload bukti pembayaran
     public function storePembayaran(Request $request)
     {
         \Log::info('storePembayaran called', $request->all());
         
+        // Validasi file bukti bayar
         $request->validate([
             'bukti_pembayaran' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'tanggal_pembayaran' => 'required|date',
@@ -374,15 +382,16 @@ class DashboardController extends Controller
                 return back()->withErrors(['error' => 'Data pendaftaran tidak ditemukan.']);
             }
 
+            // Upload file bukti bayar
             if ($request->hasFile('bukti_pembayaran')) {
                 $file = $request->file('bukti_pembayaran');
                 $fileName = 'pembayaran_' . $pendaftar->id . '_' . time() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('public/pembayaran', $fileName);
                 
-                // Update status pembayaran ke pending
+                // Update status jadi PAYMENT_PENDING (menunggu verifikasi keuangan)
                 $pendaftar->update(['status' => 'PAYMENT_PENDING']);
                 
-                // Simpan bukti pembayaran ke tabel berkas
+                // Simpan data bukti pembayaran ke tabel berkas
                 DB::table('pendaftar_berkas')->insert([
                     'pendaftar_id' => $pendaftar->id,
                     'jenis' => 'BUKTI_BAYAR',
@@ -404,6 +413,7 @@ class DashboardController extends Controller
         }
     }
 
+    // Tampilkan halaman cetak kartu pendaftaran
     public function cetakKartu()
     {
         $userId = auth('pengguna')->id();

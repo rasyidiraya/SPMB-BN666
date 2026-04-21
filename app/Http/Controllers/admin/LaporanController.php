@@ -11,6 +11,7 @@ use App\Models\Pendaftar\Gelombang;
 
 class LaporanController extends Controller
 {
+    // Tampilkan halaman laporan dengan dropdown filter jurusan & gelombang
     public function index()
     {
         $jurusan = Jurusan::all();
@@ -18,28 +19,35 @@ class LaporanController extends Controller
         return view('admin.laporan.index', compact('jurusan', 'gelombang'));
     }
 
+    // Export data pendaftar ke file CSV
     public function export(Request $request)
     {
+        // Ambil data pendaftar beserta relasi
         $query = Pendaftar::with(['jurusan', 'gelombang', 'dataSiswa']);
         
+        // Filter berdasarkan jurusan
         if ($request->jurusan_id) {
             $query->where('jurusan_id', $request->jurusan_id);
         }
         
+        // Filter berdasarkan gelombang
         if ($request->gelombang_id) {
             $query->where('gelombang_id', $request->gelombang_id);
         }
         
+        // Filter berdasarkan status
         if ($request->status) {
             $query->where('status', $request->status);
         }
         
+        // Filter berdasarkan rentang tanggal
         if ($request->tanggal_mulai && $request->tanggal_selesai) {
             $query->whereBetween('created_at', [$request->tanggal_mulai, $request->tanggal_selesai]);
         }
         
         $data = $query->get();
         
+        // Buat file CSV untuk didownload
         $filename = 'laporan_pendaftar_' . date('Y-m-d_H-i-s') . '.csv';
         
         $headers = [
@@ -62,7 +70,7 @@ class LaporanController extends Controller
                 'Tanggal Verifikasi'
             ]);
             
-            // Data rows
+            // Isi data CSV
             foreach ($data as $pendaftar) {
                 fputcsv($file, [
                     $pendaftar->no_pendaftaran,

@@ -51,19 +51,17 @@
                 @php
                   $isActive = $gelombang->status === 'aktif';
                   $isPast = $gelombang->tgl_selesai < $today;
-                  $isUpcoming = $gelombang->tgl_mulai > $today;
-                  $statusClass = $isPast ? 'past' : ($isUpcoming ? 'upcoming' : ($isActive && !$isPast ? 'active' : 'inactive'));
+                  
+                  $statusClass = $isActive ? 'active' : ($isPast ? 'past' : 'inactive');
                 @endphp
                 <div class="gelombang-item {{ $statusClass }}">
                   <strong>{{ $gelombang->nama }}</strong><br>
                   {{ \Carbon\Carbon::parse($gelombang->tgl_mulai)->format('d M') }} - {{ \Carbon\Carbon::parse($gelombang->tgl_selesai)->format('d M Y') }}<br>
                   Rp {{ number_format($gelombang->biaya_daftar, 0, ',', '.') }}
-                  @if($isPast)
-                    <span class="gelombang-status" style="color: #9e9e9e;">● SELESAI</span>
-                  @elseif($isActive && !$isPast && !$isUpcoming)
+                  @if($isActive)
                     <span class="gelombang-status">● AKTIF</span>
-                  @elseif($isUpcoming)
-                    <span class="gelombang-status" style="color: #ff9800;">● AKAN DATANG</span>
+                  @elseif($isPast)
+                    <span class="gelombang-status" style="color: #9e9e9e;">● SELESAI</span>
                   @else
                     <span class="gelombang-status" style="color: #9e9e9e;">● TIDAK AKTIF</span>
                   @endif
@@ -83,7 +81,7 @@
               @foreach($allJurusan as $jurusan)
                 @php
                   $terisi = \App\Models\Pendaftar\Pendaftar::where('jurusan_id', $jurusan->id)
-                      ->whereIn('status', ['ADM_PASS', 'PAYMENT_PENDING', 'PAID'])
+                      ->where('status', 'PAID')
                       ->count();
                   $sisaKuota = $jurusan->kuota - $terisi;
                   $persentase = $jurusan->kuota > 0 ? ($terisi / $jurusan->kuota) * 100 : 0;
@@ -101,10 +99,7 @@
 
       @php
         $today = now()->toDateString();
-        $gelombangAktif = \App\Models\Pendaftar\Gelombang::where('status', 'aktif')
-            ->where('tgl_mulai', '<=', $today)
-            ->where('tgl_selesai', '>=', $today)
-            ->first();
+        $gelombangAktif = \App\Models\Pendaftar\Gelombang::where('status', 'aktif')->first();
       @endphp
       
       @if($gelombangAktif)
@@ -113,13 +108,13 @@
           <div class="row align-items-center">
             <div class="col-md-2">
               <div class="event-date">
-                <span class="month">{{ $gelombangAktif->tgl_selesai->format('M') }}</span>
-                <span class="day">{{ $gelombangAktif->tgl_selesai->format('d') }}</span>
+                <span class="month">{{ \Carbon\Carbon::parse($gelombangAktif->tgl_selesai)->format('M') }}</span>
+                <span class="day">{{ \Carbon\Carbon::parse($gelombangAktif->tgl_selesai)->format('d') }}</span>
               </div>
             </div>
             <div class="col-md-8">
               <h3>{{ $gelombangAktif->nama }}</h3>
-              <p>Batas akhir pendaftaran {{ $gelombangAktif->nama }} sampai {{ $gelombangAktif->tgl_selesai->format('d F Y') }}. Biaya pendaftaran Rp {{ number_format($gelombangAktif->biaya_daftar, 0, ',', '.') }}</p>
+              <p>Batas akhir pendaftaran {{ $gelombangAktif->nama }} sampai {{ \Carbon\Carbon::parse($gelombangAktif->tgl_selesai)->format('d F Y') }}. Biaya pendaftaran Rp {{ number_format($gelombangAktif->biaya_daftar, 0, ',', '.') }}</p>
             </div>
             <div class="col-md-2">
               @auth('pengguna')
@@ -153,12 +148,14 @@
 
               @php
                 $totalKuota = \App\Models\Pendaftar\Jurusan::sum('kuota');
+                $totalTerisi = \App\Models\Pendaftar\Pendaftar::where('status', 'PAID')->count();
+                $kuotaTersedia = max(0, $totalKuota - $totalTerisi);
                 $jumlahJurusan = \App\Models\Pendaftar\Jurusan::count();
                 $jumlahGelombang = \App\Models\Pendaftar\Gelombang::count();
               @endphp
               <div class="stats-row">
                 <div class="stat-item">
-                  <div class="number">{{ $totalKuota }}</div>
+                  <div class="number">{{ $kuotaTersedia }}</div>
                   <div class="label">Kuota Tersedia</div>
                 </div>
                 <div class="stat-item">

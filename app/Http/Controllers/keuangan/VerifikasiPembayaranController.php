@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\DB;
 
 class VerifikasiPembayaranController extends Controller
 {
+    // Tampilkan daftar pendaftar yang perlu diverifikasi pembayarannya
     public function index(Request $request)
     {
+        // Ambil data pendaftar yang terkait pembayaran
         $query = DB::table('pendaftar')
             ->join('pendaftar_data_siswa', 'pendaftar.id', '=', 'pendaftar_data_siswa.pendaftar_id')
             ->join('jurusan', 'pendaftar.jurusan_id', '=', 'jurusan.id')
@@ -33,10 +35,12 @@ class VerifikasiPembayaranController extends Controller
             ->whereIn('pendaftar.status', ['ADM_PASS', 'PAYMENT_PENDING', 'PAID', 'PAYMENT_REJECT'])
             ->orderBy('pendaftar.created_at', 'desc');
 
+        // Filter berdasarkan status
         if ($request->status) {
             $query->where('pendaftar.status', $request->status);
         }
         
+        // Filter pencarian berdasarkan no pendaftaran atau nama
         if ($request->search) {
             $query->where(function($q) use ($request) {
                 $q->where('pendaftar.no_pendaftaran', 'like', '%'.$request->search.'%')
@@ -49,6 +53,7 @@ class VerifikasiPembayaranController extends Controller
         return view('keuangan.verifikasi-pembayaran.index', compact('pendaftar'));
     }
 
+    // Tampilkan detail pembayaran pendaftar
     public function detail($id)
     {
         $pendaftar = DB::table('pendaftar')
@@ -76,6 +81,7 @@ class VerifikasiPembayaranController extends Controller
         return view('keuangan.verifikasi-pembayaran.detail', compact('pendaftar'));
     }
 
+    // Proses verifikasi pembayaran (terima/tolak)
     public function verifikasi(Request $request, $id)
     {
         $request->validate([
@@ -83,6 +89,7 @@ class VerifikasiPembayaranController extends Controller
             'catatan' => 'nullable|string|max:500'
         ]);
 
+        // Update status pembayaran
         DB::table('pendaftar')
             ->where('id', $id)
             ->update(['status' => $request->status]);
@@ -91,8 +98,10 @@ class VerifikasiPembayaranController extends Controller
             ->with('success', 'Verifikasi pembayaran berhasil disimpan');
     }
 
+    // Tampilkan riwayat pembayaran yang sudah diverifikasi
     public function riwayat(Request $request)
     {
+        // Ambil data yang sudah PAID atau PAYMENT_REJECT
         $query = DB::table('pendaftar')
             ->join('pendaftar_data_siswa', 'pendaftar.id', '=', 'pendaftar_data_siswa.pendaftar_id')
             ->join('jurusan', 'pendaftar.jurusan_id', '=', 'jurusan.id')
@@ -116,10 +125,12 @@ class VerifikasiPembayaranController extends Controller
             ->whereIn('pendaftar.status', ['PAID', 'PAYMENT_REJECT'])
             ->orderBy('pendaftar.created_at', 'desc');
 
+        // Filter berdasarkan status
         if ($request->status) {
             $query->where('pendaftar.status', $request->status);
         }
         
+        // Filter pencarian
         if ($request->search) {
             $query->where(function($q) use ($request) {
                 $q->where('pendaftar.no_pendaftaran', 'like', '%'.$request->search.'%')

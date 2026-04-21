@@ -9,12 +9,14 @@ use Illuminate\Http\Request;
 
 class MasterDataController extends Controller
 {
+    // Tampilkan halaman kelola jurusan
     public function jurusan()
     {
         $jurusan = Jurusan::all();
         return view('admin.master.jurusan', compact('jurusan'));
     }
 
+    // Tambah jurusan baru
     public function storeJurusan(Request $request)
     {
         $request->validate([
@@ -27,6 +29,7 @@ class MasterDataController extends Controller
         return back()->with('success', 'Jurusan berhasil ditambahkan');
     }
 
+    // Update data jurusan
     public function updateJurusan(Request $request, $id)
     {
         $request->validate([
@@ -40,6 +43,7 @@ class MasterDataController extends Controller
         return back()->with('success', 'Jurusan berhasil diupdate');
     }
 
+    // Hapus jurusan
     public function deleteJurusan($id)
     {
         $jurusan = Jurusan::findOrFail($id);
@@ -47,12 +51,14 @@ class MasterDataController extends Controller
         return back()->with('success', 'Jurusan berhasil dihapus');
     }
 
+    // Tampilkan halaman kelola gelombang pendaftaran
     public function gelombang()
     {
         $gelombang = Gelombang::all();
         return view('admin.master.gelombang', compact('gelombang'));
     }
 
+    // Tambah gelombang baru
     public function storeGelombang(Request $request)
     {
         $request->validate([
@@ -67,6 +73,7 @@ class MasterDataController extends Controller
         return back()->with('success', 'Gelombang berhasil ditambahkan');
     }
 
+    // Update data gelombang
     public function updateGelombang(Request $request, $id)
     {
         $request->validate([
@@ -82,11 +89,12 @@ class MasterDataController extends Controller
         return back()->with('success', 'Gelombang berhasil diupdate');
     }
 
+    // Hapus gelombang (gagal kalau sudah ada pendaftar)
     public function deleteGelombang($id)
     {
         $gelombang = Gelombang::findOrFail($id);
         
-        // Cek apakah gelombang sedang digunakan
+        // Cek apakah gelombang masih dipakai pendaftar
         if ($gelombang->pendaftar()->count() > 0) {
             return back()->with('error', 'Gelombang tidak dapat dihapus karena sudah ada pendaftar');
         }
@@ -95,12 +103,13 @@ class MasterDataController extends Controller
         return back()->with('success', 'Gelombang berhasil dihapus');
     }
 
+    // Aktifkan/nonaktifkan gelombang (hanya 1 yang boleh aktif)
     public function toggleStatusGelombang($id)
     {
         $gelombang = Gelombang::findOrFail($id);
         
         if ($gelombang->status === 'nonaktif') {
-            // Nonaktifkan semua gelombang lain terlebih dahulu
+            // Nonaktifkan semua gelombang lain dulu
             Gelombang::where('id', '!=', $id)->update(['status' => 'nonaktif']);
             $gelombang->status = 'aktif';
             $status = 'diaktifkan';

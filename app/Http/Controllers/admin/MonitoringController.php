@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\DB;
 
 class MonitoringController extends Controller
 {
+    // Tampilkan halaman monitoring kelengkapan berkas pendaftar
     public function berkas(Request $request)
     {
+        // Ambil data pendaftar beserta info jurusan & gelombang
         $query = DB::table('pendaftar')
             ->join('pendaftar_data_siswa', 'pendaftar.id', '=', 'pendaftar_data_siswa.pendaftar_id')
             ->join('jurusan', 'pendaftar.jurusan_id', '=', 'jurusan.id')
@@ -24,13 +26,14 @@ class MonitoringController extends Controller
                 'pendaftar.created_at'
             );
 
+        // Filter berdasarkan status
         if ($request->status) {
             $query->where('pendaftar.status', $request->status);
         }
 
         $pendaftar = $query->paginate(20);
         
-        // Get berkas count for each pendaftar
+        // Hitung jumlah berkas yang sudah diupload per pendaftar
         foreach ($pendaftar as $item) {
             $item->jumlah_berkas = DB::table('pendaftar_berkas')
                 ->selectRaw('COUNT(DISTINCT jenis) as count')
@@ -44,6 +47,7 @@ class MonitoringController extends Controller
         return view('admin.monitoring.berkas', compact('pendaftar'));
     }
 
+    // Export data monitoring berkas ke file CSV
     public function export()
     {
         $data = DB::table('pendaftar')

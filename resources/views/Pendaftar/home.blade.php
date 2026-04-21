@@ -73,7 +73,7 @@
               @foreach($allJurusan as $jurusan)
                 @php
                   $terisi = \App\Models\Pendaftar\Pendaftar::where('jurusan_id', $jurusan->id)
-                      ->whereIn('status', ['ADM_PASS', 'PAYMENT_PENDING', 'PAID'])
+                      ->where('status', 'PAID')
                       ->count();
                   $sisaKuota = $jurusan->kuota - $terisi;
                   $persentase = $jurusan->kuota > 0 ? ($terisi / $jurusan->kuota) * 100 : 0;
@@ -91,10 +91,7 @@
 
       @php
         $today = now()->toDateString();
-        $gelombangAktif = \App\Models\Pendaftar\Gelombang::where('status', 'aktif')
-            ->where('tgl_mulai', '<=', $today)
-            ->where('tgl_selesai', '>=', $today)
-            ->first();
+        $gelombangAktif = \App\Models\Pendaftar\Gelombang::where('status', 'aktif')->first();
       @endphp
       
       @if($gelombangAktif)
@@ -103,13 +100,13 @@
           <div class="row align-items-center">
             <div class="col-md-2">
               <div class="event-date">
-                <span class="month">{{ $gelombangAktif->tgl_selesai->format('M') }}</span>
-                <span class="day">{{ $gelombangAktif->tgl_selesai->format('d') }}</span>
+                <span class="month">{{ \Carbon\Carbon::parse($gelombangAktif->tgl_selesai)->format('M') }}</span>
+                <span class="day">{{ \Carbon\Carbon::parse($gelombangAktif->tgl_selesai)->format('d') }}</span>
               </div>
             </div>
             <div class="col-md-8">
               <h3>{{ $gelombangAktif->nama }}</h3>
-              <p>Batas akhir pendaftaran {{ $gelombangAktif->nama }} sampai {{ $gelombangAktif->tgl_selesai->format('d F Y') }}. Biaya pendaftaran Rp {{ number_format($gelombangAktif->biaya_daftar, 0, ',', '.') }}</p>
+              <p>Batas akhir pendaftaran {{ $gelombangAktif->nama }} sampai {{ \Carbon\Carbon::parse($gelombangAktif->tgl_selesai)->format('d F Y') }}. Biaya pendaftaran Rp {{ number_format($gelombangAktif->biaya_daftar, 0, ',', '.') }}</p>
             </div>
             <div class="col-md-2">
               @auth('pengguna')
@@ -143,12 +140,14 @@
 
               @php
                 $totalKuota = \App\Models\Pendaftar\Jurusan::sum('kuota');
+                $totalTerisi = \App\Models\Pendaftar\Pendaftar::where('status', 'PAID')->count();
+                $kuotaTersedia = max(0, $totalKuota - $totalTerisi);
                 $jumlahJurusan = \App\Models\Pendaftar\Jurusan::count();
                 $jumlahGelombang = \App\Models\Pendaftar\Gelombang::count();
               @endphp
               <div class="stats-row">
                 <div class="stat-item">
-                  <div class="number">{{ $totalKuota }}</div>
+                  <div class="number">{{ $kuotaTersedia }}</div>
                   <div class="label">Kuota Tersedia</div>
                 </div>
                 <div class="stat-item">
