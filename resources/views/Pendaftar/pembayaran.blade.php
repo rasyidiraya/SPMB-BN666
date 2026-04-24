@@ -76,7 +76,7 @@
           $user = Auth::guard('pengguna')->user();
         @endphp
         
-        @if($pendaftar && in_array($pendaftar->status, ['ADM_PASS', 'PAYMENT_PENDING']))
+        @if($pendaftar && in_array($pendaftar->status, ['ADM_PASS', 'PAYMENT_PENDING', 'PAYMENT_REJECT']))
         <!-- Info Pembayaran -->
         <div class="card shadow mb-4">
           <div class="card-body">
@@ -277,6 +277,9 @@
               @elseif($pendaftar->status == 'PAYMENT_PENDING')
                 <span class="badge bg-info me-2">Menunggu Konfirmasi</span>
                 <small class="text-muted">Bukti pembayaran sedang diverifikasi</small>
+              @elseif($pendaftar->status == 'PAYMENT_REJECT')
+                <span class="badge bg-danger me-2">Pembayaran Ditolak</span>
+                <small class="text-danger">Silakan unggah (upload) ulang bukti pembayaran Anda yang benar.</small>
               @endif
             </div>
             <div class="mt-3">

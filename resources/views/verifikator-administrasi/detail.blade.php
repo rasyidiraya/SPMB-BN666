@@ -159,6 +159,11 @@
                                     </div>
                                 </div>
 
+                                <div class="form-group" id="catatan-group" style="display: none;">
+                                    <label><strong>Catatan Penolakan <span class="text-danger">*</span></strong></label>
+                                    <textarea name="catatan" id="catatan" class="form-control" rows="3" placeholder="Contoh: Foto berkas buram, data tidak sesuai..."></textarea>
+                                </div>
+
                                 <div class="form-group">
                                     <button type="submit" class="btn btn-primary btn-block">
                                         <i class="fas fa-save"></i> Simpan Verifikasi
@@ -235,7 +240,31 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Silakan pilih keputusan verifikasi!');
             return false;
         }
+        
+        if (document.getElementById('tolak').checked && document.getElementById('catatan').value.trim() === '') {
+            e.preventDefault();
+            alert('Silakan isi catatan penolakan!');
+            return false;
+        }
     });
+
+    const radioLulus = document.getElementById('lulus');
+    const radioTolak = document.getElementById('tolak');
+    const groupCatatan = document.getElementById('catatan-group');
+    const inputCatatan = document.getElementById('catatan');
+
+    function toggleCatatan() {
+        if (radioTolak.checked) {
+            groupCatatan.style.display = 'block';
+            inputCatatan.required = true;
+        } else {
+            groupCatatan.style.display = 'none';
+            inputCatatan.required = false;
+        }
+    }
+
+    radioLulus.addEventListener('change', toggleCatatan);
+    radioTolak.addEventListener('change', toggleCatatan);
 });
 </script>
 

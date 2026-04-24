@@ -104,6 +104,7 @@ class VerifikatorController extends Controller
             ->where('id', $id)
             ->update([
                 'status' => $request->status,
+                'catatan' => $request->catatan,
                 'tgl_verifikasi_adm' => now()
             ]);
 

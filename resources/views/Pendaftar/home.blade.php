@@ -16,9 +16,21 @@
               @php
                 $userPendaftar = \App\Models\Pendaftar\Pendaftar::where('user_id', Auth::guard('pengguna')->id())->first();
               @endphp
-              @if($userPendaftar && $userPendaftar->status == 'PAID')
-                <a href="{{ route('pendaftar.status') }}" class="btn-apply">Lihat Status</a>
-                <a href="{{ route('pendaftar.cetak-kartu') }}" class="btn-tour">Cetak Kartu</a>
+              @if($userPendaftar)
+                @if($userPendaftar->status == 'PAID')
+                  <a href="{{ route('pendaftar.status') }}" class="btn-apply">Lihat Status</a>
+                  <a href="{{ route('pendaftar.cetak-kartu') }}" class="btn-tour">Cetak Kartu</a>
+                @elseif(in_array($userPendaftar->status, ['ADM_PASS', 'PAYMENT_REJECT']))
+                  <a href="{{ route('pendaftar.pembayaran') }}" class="btn-apply">Upload Pembayaran</a>
+                  <a href="{{ route('pendaftar.status') }}" class="btn-tour">Cek Status</a>
+                @elseif($userPendaftar->status == 'DRAFT')
+                  <a href="{{ route('pendaftar.upload-berkas') }}" class="btn-apply">Resume Upload Berkas</a>
+                @elseif($userPendaftar->status == 'ADM_REJECT')
+                  <a href="{{ route('pendaftar.upload-berkas') }}" class="btn-apply">Revisi Berkas</a>
+                  <a href="{{ route('pendaftar.pendaftaran') }}" class="btn-tour">Revisi Data</a>
+                @else
+                  <a href="{{ route('pendaftar.status') }}" class="btn-apply">Cek Status</a>
+                @endif
               @else
                 <a href="{{ route('pendaftar.pendaftaran') }}" class="btn-apply">Mulai Pendaftaran</a>
                 <a href="{{ route('pendaftar.status') }}" class="btn-tour">Cek Status</a>
@@ -110,8 +122,16 @@
             </div>
             <div class="col-md-2">
               @auth('pengguna')
-                @if($userPendaftar && $userPendaftar->status == 'PAID')
-                  <a href="{{ route('pendaftar.status') }}" class="btn-register">Status</a>
+                @if($userPendaftar)
+                  @if($userPendaftar->status == 'PAID')
+                    <a href="{{ route('pendaftar.status') }}" class="btn-register">Status</a>
+                  @elseif(in_array($userPendaftar->status, ['ADM_PASS', 'PAYMENT_REJECT']))
+                    <a href="{{ route('pendaftar.pembayaran') }}" class="btn-register">Bayar</a>
+                  @elseif($userPendaftar->status == 'ADM_REJECT')
+                    <a href="{{ route('pendaftar.upload-berkas') }}" class="btn-register">Revisi Berkas</a>
+                  @else
+                    <a href="{{ route('pendaftar.status') }}" class="btn-register">Status</a>
+                  @endif
                 @else
                   <a href="{{ route('pendaftar.pendaftaran') }}" class="btn-register">Daftar</a>
                 @endif
@@ -165,16 +185,18 @@
               </div>
 
               @auth('pengguna')
-                @if($userPendaftar && $userPendaftar->status == 'PAID')
-                  <a href="{{ route('pendaftar.status') }}" class="btn-learn-more">
-                    Lihat Status
-                    <i class="bi bi-arrow-right"></i>
-                  </a>
+                @if($userPendaftar)
+                  @if($userPendaftar->status == 'PAID')
+                    <a href="{{ route('pendaftar.status') }}" class="btn-learn-more">Lihat Status <i class="bi bi-arrow-right"></i></a>
+                  @elseif(in_array($userPendaftar->status, ['ADM_PASS', 'PAYMENT_REJECT']))
+                    <a href="{{ route('pendaftar.pembayaran') }}" class="btn-learn-more">Lanjut Pembayaran <i class="bi bi-arrow-right"></i></a>
+                  @elseif($userPendaftar->status == 'ADM_REJECT')
+                    <a href="{{ route('pendaftar.upload-berkas') }}" class="btn-learn-more">Revisi Berkas <i class="bi bi-arrow-right"></i></a>
+                  @else
+                    <a href="{{ route('pendaftar.status') }}" class="btn-learn-more">Cek Status <i class="bi bi-arrow-right"></i></a>
+                  @endif
                 @else
-                  <a href="{{ route('pendaftar.pendaftaran') }}" class="btn-learn-more">
-                    Mulai Pendaftaran
-                    <i class="bi bi-arrow-right"></i>
-                  </a>
+                  <a href="{{ route('pendaftar.pendaftaran') }}" class="btn-learn-more">Mulai Pendaftaran <i class="bi bi-arrow-right"></i></a>
                 @endif
               @else
                 <a href="{{ route('pendaftar.register') }}" class="btn-learn-more">
@@ -213,8 +235,8 @@
           @php
             $pendaftar = \App\Models\Pendaftar\Pendaftar::where('user_id', Auth::guard('pengguna')->id())->first();
             
-            // Reset semua jika ditolak
-            if ($pendaftar && in_array($pendaftar->status, ['ADM_REJECT', 'PAYMENT_REJECT'])) {
+            // Reset semua HANYA jika ditolak administrasi
+            if ($pendaftar && $pendaftar->status === 'ADM_REJECT') {
               $steps = [
                 ['name' => 'Isi Formulir', 'done' => false],
                 ['name' => 'Upload Berkas', 'done' => false],
@@ -516,18 +538,22 @@
 
               <div class="action-buttons">
                 @auth('pengguna')
-                  @if($userPendaftar && $userPendaftar->status == 'PAID')
-                    <a href="{{ route('pendaftar.status') }}" class="btn-primary">Lihat Status</a>
-                    <a href="{{ route('pendaftar.cetak-kartu') }}" class="btn-secondary">
-                      <span>Cetak Kartu</span>
-                      <i class="bi bi-arrow-right"></i>
-                    </a>
+                  @if($userPendaftar)
+                    @if($userPendaftar->status == 'PAID')
+                      <a href="{{ route('pendaftar.status') }}" class="btn-primary">Lihat Status</a>
+                      <a href="{{ route('pendaftar.cetak-kartu') }}" class="btn-secondary">
+                        <span>Cetak Kartu</span>
+                        <i class="bi bi-arrow-right"></i>
+                      </a>
+                    @elseif(in_array($userPendaftar->status, ['ADM_PASS', 'PAYMENT_REJECT']))
+                      <a href="{{ route('pendaftar.pembayaran') }}" class="btn-primary">Upload Pembayaran</a>
+                    @elseif($userPendaftar->status == 'ADM_REJECT')
+                      <a href="{{ route('pendaftar.upload-berkas') }}" class="btn-primary">Revisi Berkas</a>
+                    @else
+                      <a href="{{ route('pendaftar.status') }}" class="btn-primary">Cek Status</a>
+                    @endif
                   @else
                     <a href="{{ route('pendaftar.pendaftaran') }}" class="btn-primary">Mulai Pendaftaran</a>
-                    <a href="{{ route('pendaftar.status') }}" class="btn-secondary">
-                      <span>Cek Status</span>
-                      <i class="bi bi-arrow-right"></i>
-                    </a>
                   @endif
                 @else
                   <a href="{{ route('pendaftar.register') }}" class="btn-primary">Daftar SPMB</a>

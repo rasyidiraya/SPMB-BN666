@@ -60,7 +60,7 @@
                         <div class="input-group">
                           <span class="input-group-text"><i class="bi bi-telephone-fill"></i></span>
                           <input type="text" name="hp" id="hp" class="form-control" placeholder="08xxxxxxxxxx"
-                            value="{{ old('hp') }}" required>
+                            value="{{ old('hp') }}" pattern="[0-9]*" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
                         </div>
                       </div>
 
@@ -70,6 +70,9 @@
                           <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
                           <input type="password" name="password" id="password" class="form-control" placeholder="••••••••"
                             required>
+                          <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                            <i class="bi bi-eye-slash-fill" id="togglePasswordIcon"></i>
+                          </button>
                         </div>
                       </div>
 
@@ -79,6 +82,9 @@
                           <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
                           <input type="password" name="password_confirmation" id="password_confirmation"
                             class="form-control" placeholder="••••••••" required>
+                          <button class="btn btn-outline-secondary" type="button" id="togglePasswordConfirm">
+                            <i class="bi bi-eye-slash-fill" id="togglePasswordConfirmIcon"></i>
+                          </button>
                         </div>
                       </div>
 
@@ -335,10 +341,24 @@
           method: 'POST',
           body: formData,
           headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
           }
         })
-          .then(response => response.json())
+          .then(async response => {
+            const data = await response.json();
+            if (!response.ok) {
+              if (response.status === 422) {
+                let errorMsg = 'Validasi Gagal:\n';
+                for (let key in data.errors) {
+                  errorMsg += '- ' + data.errors[key][0] + '\n';
+                }
+                throw new Error(errorMsg);
+              }
+              throw new Error(data.message || 'Terjadi kesalahan pada server');
+            }
+            return data;
+          })
           .then(data => {
             if (data.success) {
               document.getElementById('emailDisplay').textContent = formData.get('email');
@@ -351,7 +371,7 @@
           })
           .catch(error => {
             console.error('Error:', error);
-            alert('Terjadi kesalahan. Silakan coba lagi.');
+            alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
           })
           .finally(() => {
             document.getElementById('sendOtpText').style.display = 'inline';
@@ -402,10 +422,24 @@
           method: 'POST',
           body: registerData,
           headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
           }
         })
-          .then(response => response.json())
+          .then(async response => {
+            const data = await response.json();
+            if (!response.ok) {
+              if (response.status === 422) {
+                let errorMsg = 'Validasi Gagal:\n';
+                for (let key in data.errors) {
+                  errorMsg += '- ' + data.errors[key][0] + '\n';
+                }
+                throw new Error(errorMsg);
+              }
+              throw new Error(data.message || 'Terjadi kesalahan pada server');
+            }
+            return data;
+          })
           .then(data => {
             if (data.success) {
               alert(data.message || 'Registrasi berhasil!');
@@ -416,7 +450,7 @@
           })
           .catch(error => {
             console.error('Error:', error);
-            alert('Terjadi kesalahan. Silakan coba lagi.');
+            alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
           })
           .finally(() => {
             document.getElementById('verifyOtpText').style.display = 'inline';
@@ -433,10 +467,15 @@
           method: 'POST',
           body: formData,
           headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
           }
         })
-          .then(response => response.json())
+          .then(async response => {
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Terjadi kesalahan pada server');
+            return data;
+          })
           .then(data => {
             if (data.success) {
               alert('Kode OTP baru telah dikirim');
@@ -444,6 +483,9 @@
             } else {
               alert(data.message || 'Gagal mengirim ulang OTP');
             }
+          })
+          .catch(error => {
+            alert(error.message || 'Gagal mengirim ulang OTP');
           });
       });
 
@@ -473,5 +515,24 @@
           }
         }, 1000);
       }
+
+      // Password Toggle Visibility
+      document.getElementById('togglePassword').addEventListener('click', function () {
+        const passwordInput = document.getElementById('password');
+        const icon = document.getElementById('togglePasswordIcon');
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        icon.classList.toggle('bi-eye-fill');
+        icon.classList.toggle('bi-eye-slash-fill');
+      });
+
+      document.getElementById('togglePasswordConfirm').addEventListener('click', function () {
+        const passwordConfirmInput = document.getElementById('password_confirmation');
+        const icon = document.getElementById('togglePasswordConfirmIcon');
+        const type = passwordConfirmInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordConfirmInput.setAttribute('type', type);
+        icon.classList.toggle('bi-eye-fill');
+        icon.classList.toggle('bi-eye-slash-fill');
+      });
     </script>
 @endsection

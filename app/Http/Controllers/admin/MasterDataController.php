@@ -93,12 +93,12 @@ class MasterDataController extends Controller
     public function deleteGelombang($id)
     {
         $gelombang = Gelombang::findOrFail($id);
-        
+
         // Cek apakah gelombang masih dipakai pendaftar
         if ($gelombang->pendaftar()->count() > 0) {
             return back()->with('error', 'Gelombang tidak dapat dihapus karena sudah ada pendaftar');
         }
-        
+
         $gelombang->delete();
         return back()->with('success', 'Gelombang berhasil dihapus');
     }
@@ -107,7 +107,7 @@ class MasterDataController extends Controller
     public function toggleStatusGelombang($id)
     {
         $gelombang = Gelombang::findOrFail($id);
-        
+
         if ($gelombang->status === 'nonaktif') {
             // Nonaktifkan semua gelombang lain dulu
             Gelombang::where('id', '!=', $id)->update(['status' => 'nonaktif']);
@@ -117,7 +117,7 @@ class MasterDataController extends Controller
             $gelombang->status = 'nonaktif';
             $status = 'dinonaktifkan';
         }
-        
+
         $gelombang->save();
         return back()->with('success', "Gelombang {$gelombang->nama} berhasil {$status}");
     }

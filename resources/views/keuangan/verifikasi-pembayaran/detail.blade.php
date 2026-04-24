@@ -102,11 +102,16 @@
                             @csrf
                             <div class="form-group">
                                 <label>Status Verifikasi</label>
-                                <select name="status" class="form-control" required>
+                                <select name="status" id="status-select" class="form-control" required>
                                     <option value="">Pilih Status</option>
                                     <option value="PAID">Terverifikasi (PAID)</option>
                                     <option value="PAYMENT_REJECT">Ditolak</option>
                                 </select>
+                            </div>
+                            
+                            <div class="form-group" id="catatan-group" style="display: none;">
+                                <label>Catatan Penolakan <span class="text-danger">*</span></label>
+                                <textarea name="catatan" id="catatan" class="form-control" rows="3" placeholder="Contoh: Bukti transfer tidak valid..."></textarea>
                             </div>
                             
 
@@ -127,5 +132,32 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('status-select');
+    const groupCatatan = document.getElementById('catatan-group');
+    const inputCatatan = document.getElementById('catatan');
+    const form = document.querySelector('form');
+
+    statusSelect.addEventListener('change', function() {
+        if (this.value === 'PAYMENT_REJECT') {
+            groupCatatan.style.display = 'block';
+            inputCatatan.required = true;
+        } else {
+            groupCatatan.style.display = 'none';
+            inputCatatan.required = false;
+        }
+    });
+
+    form.addEventListener('submit', function(e) {
+        if (statusSelect.value === 'PAYMENT_REJECT' && inputCatatan.value.trim() === '') {
+            e.preventDefault();
+            alert('Silakan isi catatan penolakan!');
+            return false;
+        }
+    });
+});
+</script>
 
 @endsection

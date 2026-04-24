@@ -17,12 +17,22 @@ class OtpController extends Controller
     // Fungsi kirim OTP ke email user saat registrasi
     public function sendOtp(Request $request)
     {
-        // Validasi input form
         $request->validate([
             'nama' => 'required|string|max:255',
             'email' => 'required|email|unique:pengguna,email',
-            'hp' => 'required|string|max:20',
+            'hp' => 'required|numeric|digits_between:10,14',
             'password' => 'required|string|min:6|confirmed',
+        ], [
+            'nama.required' => 'Nama lengkap wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email ini sudah terdaftar. Silakan login atau gunakan email lain.',
+            'hp.required' => 'Nomor HP wajib diisi.',
+            'hp.numeric' => 'Nomor HP hanya boleh berisi angka.',
+            'hp.digits_between' => 'Nomor HP harus berupa angka berjumlah antara 10-14 digit.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal harus 6 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.'
         ]);
 
         // Buat kode OTP 6 digit
@@ -67,9 +77,24 @@ class OtpController extends Controller
         // Ambil data registrasi dari session
         $registrationData = Session::get('registration_data');
         
+        Log::info('Verify OTP Attempt', [
+            'input_otp' => $request->otp,
+            'session_data' => $registrationData ? 'exists' : 'null',
+            'session_otp' => $registrationData ? $registrationData['otp'] : null,
+            'is_expired' => $registrationData ? now()->gt($registrationData['otp_expires']) : true
+        ]);
+
         // Cek OTP cocok dan belum expired
-        if (!$registrationData || $request->otp != $registrationData['otp'] || now()->gt($registrationData['otp_expires'])) {
-            return response()->json(['success' => false, 'message' => 'Kode OTP salah atau kedaluwarsa']);
+        if (!$registrationData) {
+            return response()->json(['success' => false, 'message' => 'Sesi registrasi telah habis, silakan refresh halaman.']);
+        }
+        
+        if ($request->otp != $registrationData['otp']) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP salah.']);
+        }
+        
+        if (now()->gt(\Carbon\Carbon::parse($registrationData['otp_expires']))) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP telah kedaluwarsa.']);
         }
 
         try {

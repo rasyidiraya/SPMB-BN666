@@ -24,10 +24,10 @@ class DashboardController extends Controller
         $userId = auth('pengguna')->id();
         $oldData = null;
         
-        // Cek apakah ada pendaftaran yang ditolak sebelumnya
+        // Cek apakah ada pendaftaran yang ditolak administrasi sebelumnya
         $existingPendaftar = DB::table('pendaftar')
             ->where('user_id', $userId)
-            ->whereIn('status', ['ADM_REJECT', 'PAYMENT_REJECT'])
+            ->where('status', 'ADM_REJECT')
             ->first();
             
         if ($existingPendaftar) {
@@ -100,13 +100,13 @@ class DashboardController extends Controller
             // Cek apakah user sudah pernah daftar
             $existingPendaftar = Pendaftar::where('user_id', $userId)->first();
             
-            // Tolak kalau sudah daftar dan statusnya bukan ditolak
-            if ($existingPendaftar && !in_array($existingPendaftar->status, ['ADM_REJECT', 'PAYMENT_REJECT'])) {
-                return back()->withErrors(['error' => 'Anda sudah terdaftar dan tidak dapat mendaftar ulang.'])->withInput();
+            // Tolak kalau sudah daftar (kecuali ADM_REJECT)
+            if ($existingPendaftar && $existingPendaftar->status !== 'ADM_REJECT') {
+                return back()->withErrors(['error' => 'Anda sudah terdaftar dan tidak dapat mengisi ulang formulir pendaftaran.'])->withInput();
             }
             
-            // Hapus data lama kalau sebelumnya ditolak
-            if ($existingPendaftar && in_array($existingPendaftar->status, ['ADM_REJECT', 'PAYMENT_REJECT'])) {
+            // Hapus data lama kalau sebelumnya ditolak administrasi
+            if ($existingPendaftar && $existingPendaftar->status === 'ADM_REJECT') {
                 DB::table('pendaftar_berkas')->where('pendaftar_id', $existingPendaftar->id)->delete();
                 DB::table('pendaftar_data_siswa')->where('pendaftar_id', $existingPendaftar->id)->delete();
                 DB::table('pendaftar_data_ortu')->where('pendaftar_id', $existingPendaftar->id)->delete();
@@ -390,6 +390,12 @@ class DashboardController extends Controller
                 
                 // Update status jadi PAYMENT_PENDING (menunggu verifikasi keuangan)
                 $pendaftar->update(['status' => 'PAYMENT_PENDING']);
+                
+                // Hapus bukti bayar lama jika ada (agar tidak double di database dan view admin)
+                DB::table('pendaftar_berkas')
+                    ->where('pendaftar_id', $pendaftar->id)
+                    ->where('jenis', 'BUKTI_BAYAR')
+                    ->delete();
                 
                 // Simpan data bukti pembayaran ke tabel berkas
                 DB::table('pendaftar_berkas')->insert([

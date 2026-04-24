@@ -92,7 +92,11 @@ class VerifikasiPembayaranController extends Controller
         // Update status pembayaran
         DB::table('pendaftar')
             ->where('id', $id)
-            ->update(['status' => $request->status]);
+            ->update([
+                'status' => $request->status,
+                'catatan' => $request->catatan,
+                'tgl_verifikasi_payment' => now()
+            ]);
 
         return redirect()->route('keuangan.verifikasi-pembayaran.index')
             ->with('success', 'Verifikasi pembayaran berhasil disimpan');

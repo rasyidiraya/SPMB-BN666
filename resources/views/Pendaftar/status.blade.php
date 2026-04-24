@@ -28,10 +28,21 @@
         @elseif($pendaftar && $pendaftar->status == 'ADM_REJECT')
         <div class="alert alert-danger" role="alert">
             <i class="bi bi-x-circle-fill"></i> <strong>Maaf,</strong> verifikator administrator Anda DITOLAK. 
-            <br><small>Silakan perbaiki berkas dan daftar ulang dengan data yang benar.</small>
+            <br><small>Silakan perbaiki berkas atau data pendaftaran Anda (jika diperlukan).</small>
+
+            @if(!empty($pendaftar->catatan))
+            <div class="mt-2 p-2 border border-danger rounded" style="background-color: transparent; border-left: 4px solid #dc3545 !important;">
+                <i class="bi bi-info-circle-fill me-1"></i> <strong>Alasan Penolakan:</strong><br>
+                {{ $pendaftar->catatan }}
+            </div>
+            @endif
+
             <div class="mt-3">
-                <a href="{{ route('pendaftar.pendaftaran') }}" class="btn btn-sm btn-daftar-ulang">
-                    <i class="bi bi-arrow-clockwise"></i> Daftar Ulang
+                <a href="{{ route('pendaftar.upload-berkas') }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-file-earmark-arrow-up"></i> Revisi Berkas Saja
+                </a>
+                <a href="{{ route('pendaftar.pendaftaran') }}" class="btn btn-sm btn-daftar-ulang ms-2">
+                    <i class="bi bi-arrow-clockwise"></i> Revisi Form (Daftar Ulang)
                 </a>
             </div>
         </div>
@@ -39,9 +50,17 @@
         <div class="alert alert-danger" role="alert">
             <i class="bi bi-x-circle-fill"></i> <strong>Maaf,</strong> pembayaran Anda DITOLAK. 
             <br><small>Silakan perbaiki bukti pembayaran dan daftar ulang dengan data yang benar.</small>
+
+            @if(!empty($pendaftar->catatan))
+            <div class="mt-2 p-2 border border-danger rounded" style="background-color: transparent; border-left: 4px solid #dc3545 !important;">
+                <i class="bi bi-info-circle-fill me-1"></i> <strong>Alasan Penolakan:</strong><br>
+                {{ $pendaftar->catatan }}
+            </div>
+            @endif
+
             <div class="mt-3">
-                <a href="{{ route('pendaftar.pendaftaran') }}" class="btn btn-sm btn-daftar-ulang">
-                    <i class="bi bi-arrow-clockwise"></i> Daftar Ulang
+                <a href="{{ route('pendaftar.pembayaran') }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-wallet2"></i> Revisi Bukti Pembayaran
                 </a>
             </div>
         </div>
@@ -128,6 +147,9 @@
                     <small style="color: #0074b7;">Selesai - {{ $pendaftar->tgl_verifikasi_adm ? \Carbon\Carbon::parse($pendaftar->tgl_verifikasi_adm)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') : \Carbon\Carbon::parse($pendaftar->updated_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }}</small>
                   @elseif($pendaftar->status == 'ADM_REJECT')
                     <small class="text-danger">Ditolak - {{ $pendaftar->tgl_verifikasi_adm ? \Carbon\Carbon::parse($pendaftar->tgl_verifikasi_adm)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') : \Carbon\Carbon::parse($pendaftar->updated_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }}</small>
+                    @if(!empty($pendaftar->catatan))
+                      <p class="text-danger mt-1 mb-0" style="font-size: 0.85rem;"><i class="bi bi-chat-left-text-fill"></i> {{ $pendaftar->catatan }}</p>
+                    @endif
                   @elseif($pendaftar->status == 'SUBMIT')
                     <small style="color: #60a3d9;">Dalam Proses</small>
                   @else
