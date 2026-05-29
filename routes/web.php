@@ -120,6 +120,10 @@ Route::prefix('keuangan')->name('keuangan.')->middleware(['auth:keuangan', 'role
 // Kepala Sekolah routes
 Route::prefix('kepsek')->name('kepsek.')->middleware(['auth:kepsek', 'role:kepsek', 'prevent.back', 'check.active'])->group(function () {
     Route::get('/', [App\Http\Controllers\Kepsek\DashboardController::class, 'index'])->name('dashboard');
+    
+    // Laporan
+    Route::get('/laporan', [App\Http\Controllers\Kepsek\LaporanController::class, 'index'])->name('laporan');
+    Route::post('/laporan/export', [App\Http\Controllers\Kepsek\LaporanController::class, 'export'])->name('laporan.export');
 });
 
 // API Routes untuk dropdown wilayah

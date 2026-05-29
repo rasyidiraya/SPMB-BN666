@@ -18,7 +18,20 @@
             <span>Dashboard KPI</span></a>
     </li>
 
+    <!-- Divider -->
+    <hr class="sidebar-divider">
 
+    <!-- Heading -->
+    <div class="sidebar-heading">
+        Laporan
+    </div>
+
+    <!-- Nav Item - Laporan -->
+    <li class="nav-item">
+        <a class="nav-link" href="{{ route('kepsek.laporan') }}">
+            <i class="fas fa-fw fa-file-alt"></i>
+            <span>Laporan Pendaftaran</span></a>
+    </li>
 
     <!-- Divider -->
     <hr class="sidebar-divider d-none d-md-block">

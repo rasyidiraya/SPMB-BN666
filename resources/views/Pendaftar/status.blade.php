@@ -21,9 +21,9 @@
     
     <div class="row justify-content-center">
       <div class="col-lg-10">
-        @if($pendaftar && $pendaftar->status == 'ADM_PASS')
+        @if($pendaftar && $pendaftar->status == 'ADM_ACCEPT')
         <div class="alert status-alert-success" role="alert">
-            <i class="bi bi-check-circle-fill"></i> <strong>Selamat!</strong> Verifikator administrator Anda telah DITERIMA. Silakan lanjutkan ke tahap pembayaran.
+            <i class="bi bi-check-circle-fill"></i> <strong>Selamat!</strong> Berkas Anda telah DITERIMA. Silakan lanjutkan ke tahap pembayaran.
         </div>
         @elseif($pendaftar && $pendaftar->status == 'ADM_REJECT')
         <div class="alert alert-danger" role="alert">
@@ -82,12 +82,13 @@
               <div class="col-md-4 text-md-end">
                 @php
                   $statusBadge = match($pendaftar->status) {
+                    'DRAFT' => ['class' => 'bg-secondary', 'text' => 'Draft'],
                     'SUBMIT' => ['class' => 'bg-warning', 'text' => 'Menunggu Verifikasi'],
-                    'ADM_PASS' => ['class' => 'bg-info', 'text' => 'Menunggu Pembayaran'],
-                    'ADM_REJECT' => ['class' => 'bg-danger', 'text' => 'Ditolak'],
+                    'ADM_ACCEPT' => ['class' => 'bg-info', 'text' => 'Berkas Diterima'],
+                    'ADM_REJECT' => ['class' => 'bg-danger', 'text' => 'Berkas Ditolak'],
                     'PAYMENT_PENDING' => ['class' => 'bg-warning', 'text' => 'Menunggu Konfirmasi Pembayaran'],
+                    'PAYMENT_ACCEPT' => ['class' => 'bg-success', 'text' => 'Pembayaran Diterima'],
                     'PAYMENT_REJECT' => ['class' => 'bg-danger', 'text' => 'Pembayaran Ditolak'],
-                    'PAID' => ['class' => 'bg-success', 'text' => 'Terbayar'],
                     default => ['class' => 'bg-secondary', 'text' => $pendaftar->status ?? 'Unknown']
                   };
                 @endphp
@@ -116,21 +117,21 @@
             @if($pendaftar)
             <div class="timeline">
               <!-- Submit -->
-              <div class="timeline-item {{ in_array($pendaftar->status, ['SUBMIT', 'ADM_PASS', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAID']) ? 'completed' : 'pending' }}">
+              <div class="timeline-item {{ in_array($pendaftar->status, ['SUBMIT', 'ADM_ACCEPT', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT', 'PAYMENT_REJECT']) ? 'completed' : 'pending' }}">
                 <div class="timeline-marker">
-                  <i class="bi bi-{{ in_array($pendaftar->status, ['SUBMIT', 'ADM_PASS', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAID']) ? 'check-circle-fill' : 'circle text-muted' }}" style="{{ in_array($pendaftar->status, ['SUBMIT', 'ADM_PASS', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAID']) ? 'color: #0074b7;' : '' }}"></i>
+                  <i class="bi bi-{{ in_array($pendaftar->status, ['SUBMIT', 'ADM_ACCEPT', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT', 'PAYMENT_REJECT']) ? 'check-circle-fill' : 'circle text-muted' }}" style="{{ in_array($pendaftar->status, ['SUBMIT', 'ADM_ACCEPT', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT', 'PAYMENT_REJECT']) ? 'color: #0074b7;' : '' }}"></i>
                 </div>
                 <div class="timeline-content">
                   <h6>Pendaftaran Dikirim</h6>
                   <p class="text-muted mb-1">Formulir pendaftaran telah dikirim</p>
-                  <small style="color: {{ in_array($pendaftar->status, ['SUBMIT', 'ADM_PASS', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAID']) ? '#0074b7' : '#6c757d' }};">{{ in_array($pendaftar->status, ['SUBMIT', 'ADM_PASS', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAID']) ? 'Selesai - ' . \Carbon\Carbon::parse($pendaftar->created_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') : 'Menunggu' }}</small>
+                  <small style="color: {{ in_array($pendaftar->status, ['SUBMIT', 'ADM_ACCEPT', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT', 'PAYMENT_REJECT']) ? '#0074b7' : '#6c757d' }};">{{ in_array($pendaftar->status, ['SUBMIT', 'ADM_ACCEPT', 'ADM_REJECT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT', 'PAYMENT_REJECT']) ? 'Selesai - ' . \Carbon\Carbon::parse($pendaftar->created_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') : 'Menunggu' }}</small>
                 </div>
               </div>
 
-              <!-- Verifikator Administrator -->
-              <div class="timeline-item {{ in_array($pendaftar->status, ['ADM_PASS', 'PAYMENT_PENDING', 'PAID']) ? 'completed' : ($pendaftar->status == 'ADM_REJECT' ? 'rejected' : ($pendaftar->status == 'SUBMIT' ? 'active' : 'pending')) }}">
+              <!-- Verifikasi Berkas -->
+              <div class="timeline-item {{ in_array($pendaftar->status, ['ADM_ACCEPT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT']) ? 'completed' : ($pendaftar->status == 'ADM_REJECT' ? 'rejected' : ($pendaftar->status == 'SUBMIT' ? 'active' : 'pending')) }}">
                 <div class="timeline-marker">
-                  @if(in_array($pendaftar->status, ['ADM_PASS', 'PAYMENT_PENDING', 'PAID']))
+                  @if(in_array($pendaftar->status, ['ADM_ACCEPT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT']))
                     <i class="bi bi-check-circle-fill" style="color: #0074b7;"></i>
                   @elseif($pendaftar->status == 'ADM_REJECT')
                     <i class="bi bi-x-circle-fill text-danger"></i>
@@ -141,9 +142,9 @@
                   @endif
                 </div>
                 <div class="timeline-content">
-                  <h6>Verifikator Administrator</h6>
-                  <p class="text-muted mb-1">{{ $pendaftar->status == 'ADM_REJECT' ? 'Berkas administrator ditolak' : 'Verifikasi berkas administrator' }}</p>
-                  @if(in_array($pendaftar->status, ['ADM_PASS', 'PAYMENT_PENDING', 'PAID']))
+                  <h6>Verifikasi Berkas</h6>
+                  <p class="text-muted mb-1">{{ $pendaftar->status == 'ADM_REJECT' ? 'Berkas ditolak' : 'Verifikasi berkas pendaftaran' }}</p>
+                  @if(in_array($pendaftar->status, ['ADM_ACCEPT', 'PAYMENT_PENDING', 'PAYMENT_ACCEPT']))
                     <small style="color: #0074b7;">Selesai - {{ $pendaftar->tgl_verifikasi_adm ? \Carbon\Carbon::parse($pendaftar->tgl_verifikasi_adm)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') : \Carbon\Carbon::parse($pendaftar->updated_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }}</small>
                   @elseif($pendaftar->status == 'ADM_REJECT')
                     <small class="text-danger">Ditolak - {{ $pendaftar->tgl_verifikasi_adm ? \Carbon\Carbon::parse($pendaftar->tgl_verifikasi_adm)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') : \Carbon\Carbon::parse($pendaftar->updated_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }}</small>
@@ -159,11 +160,13 @@
               </div>
 
               <!-- Pembayaran -->
-              <div class="timeline-item {{ $pendaftar->status == 'PAID' ? 'completed' : (in_array($pendaftar->status, ['ADM_PASS', 'PAYMENT_PENDING']) ? 'active' : 'pending') }}">
+              <div class="timeline-item {{ $pendaftar->status == 'PAYMENT_ACCEPT' ? 'completed' : (in_array($pendaftar->status, ['ADM_ACCEPT', 'PAYMENT_PENDING']) ? 'active' : ($pendaftar->status == 'PAYMENT_REJECT' ? 'rejected' : 'pending')) }}">
                 <div class="timeline-marker">
-                  @if($pendaftar->status == 'PAID')
+                  @if($pendaftar->status == 'PAYMENT_ACCEPT')
                     <i class="bi bi-check-circle-fill" style="color: #0074b7;"></i>
-                  @elseif(in_array($pendaftar->status, ['ADM_PASS', 'PAYMENT_PENDING']))
+                  @elseif($pendaftar->status == 'PAYMENT_REJECT')
+                    <i class="bi bi-x-circle-fill text-danger"></i>
+                  @elseif(in_array($pendaftar->status, ['ADM_ACCEPT', 'PAYMENT_PENDING']))
                     <i class="bi bi-clock-fill" style="color: #60a3d9;"></i>
                   @else
                     <i class="bi bi-circle text-muted"></i>
@@ -171,12 +174,17 @@
                 </div>
                 <div class="timeline-content">
                   <h6>Pembayaran</h6>
-                  <p class="text-muted mb-1">Pembayaran biaya pendaftaran</p>
-                  @if($pendaftar->status == 'PAID')
+                  <p class="text-muted mb-1">{{ $pendaftar->status == 'PAYMENT_REJECT' ? 'Pembayaran ditolak' : 'Pembayaran biaya pendaftaran' }}</p>
+                  @if($pendaftar->status == 'PAYMENT_ACCEPT')
                     <small style="color: #0074b7;">Selesai - {{ \Carbon\Carbon::parse($pendaftar->updated_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }}</small>
+                  @elseif($pendaftar->status == 'PAYMENT_REJECT')
+                    <small class="text-danger">Ditolak - {{ \Carbon\Carbon::parse($pendaftar->updated_at)->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }}</small>
+                    <div class="mt-2">
+                      <a href="{{ route('pendaftar.pembayaran') }}" class="btn btn-sm btn-bayar-sekarang">Upload Ulang Bukti</a>
+                    </div>
                   @elseif($pendaftar->status == 'PAYMENT_PENDING')
                     <small style="color: #60a3d9;">Menunggu Konfirmasi</small>
-                  @elseif($pendaftar->status == 'ADM_PASS')
+                  @elseif($pendaftar->status == 'ADM_ACCEPT')
                     <small style="color: #60a3d9;">Menunggu Pembayaran</small>
                     <div class="mt-2">
                       <a href="{{ route('pendaftar.pembayaran') }}" class="btn btn-sm btn-bayar-sekarang">Bayar Sekarang</a>
