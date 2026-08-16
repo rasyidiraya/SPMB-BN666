@@ -11,7 +11,10 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('pengguna', function (Blueprint $table) {
-            //
+            // Tambah kolom google_id setelah kolom email
+            $table->string('google_id')->nullable()->unique()->after('email');
+            // Jadikan password_hash nullable (untuk user yang login via Google)
+            $table->string('password_hash', 255)->nullable()->change();
         });
     }
 
@@ -21,7 +24,8 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('pengguna', function (Blueprint $table) {
-            //
+            $table->dropColumn('google_id');
+            $table->string('password_hash', 255)->nullable(false)->change();
         });
     }
 };

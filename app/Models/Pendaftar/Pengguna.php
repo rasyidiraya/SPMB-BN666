@@ -10,10 +10,10 @@ class Pengguna extends Authenticatable
     protected $table = 'pengguna';
     
     protected $fillable = [
-        'nama', 'email', 'hp', 'password_hash', 'role', 'aktif'
+        'nama', 'email', 'hp', 'password_hash', 'role', 'aktif', 'google_id'
     ];
 
-    protected $hidden = ['password_hash'];
+    protected $hidden = ['password_hash', 'remember_token'];
 
     public function getAuthPassword()
     {

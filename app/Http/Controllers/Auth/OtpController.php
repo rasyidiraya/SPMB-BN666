@@ -170,4 +170,177 @@ class OtpController extends Controller
             return response()->json(['success' => false, 'message' => 'Gagal mengirim ulang OTP']);
         }
     }
+
+    // =========================================================
+    // GOOGLE REGISTRATION OTP FLOW
+    // =========================================================
+
+    /**
+     * Kirim OTP ke email Google user untuk verifikasi registrasi.
+     * Dipanggil setelah user mengisi No. HP di form registrasi Google.
+     */
+    public function sendOtpGoogle(Request $request)
+    {
+        // Ambil data Google dari session (disimpan saat callback Google)
+        $googleData = Session::get('google_register');
+
+        if (!$googleData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi Google tidak ditemukan. Silakan ulangi login dengan Google.'
+            ]);
+        }
+
+        $request->validate([
+            'hp' => 'required|numeric|digits_between:10,14',
+        ], [
+            'hp.required'        => 'Nomor HP wajib diisi.',
+            'hp.numeric'         => 'Nomor HP hanya boleh berisi angka.',
+            'hp.digits_between'  => 'Nomor HP harus 10–14 digit.',
+        ]);
+
+        // Cek lagi apakah email sudah terdaftar (race condition)
+        if (Pengguna::where('email', $googleData['email'])->exists()) {
+            Session::forget('google_register');
+            return response()->json([
+                'success' => false,
+                'message' => 'Email ini sudah terdaftar. Silakan login.'
+            ]);
+        }
+
+        // Buat OTP 6 digit
+        $otp = rand(100000, 999999);
+
+        // Simpan data Google + HP + OTP ke session terpisah
+        Session::put('google_registration_data', [
+            'nama'      => $googleData['nama'],
+            'email'     => $googleData['email'],
+            'google_id' => $googleData['google_id'],
+            'hp'        => $request->hp,
+            'otp'       => $otp,
+            'otp_expires' => now()->addMinutes(5),
+        ]);
+
+        try {
+            Mail::send('emails.otp', ['otp' => $otp, 'nama' => $googleData['nama']], function ($message) use ($googleData) {
+                $message->to($googleData['email'])->subject('Kode OTP Registrasi SPMB via Google');
+            });
+
+            $message = 'Kode OTP telah dikirim ke ' . $googleData['email'];
+
+            if (config('mail.default') === 'log') {
+                $message = 'Testing Mode - OTP: ' . $otp;
+            }
+
+            return response()->json(['success' => true, 'message' => $message]);
+        } catch (\Exception $e) {
+            Log::error('[Google OTP] Gagal kirim OTP: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim email OTP: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Verifikasi OTP untuk registrasi via Google.
+     * Jika benar, buat akun dan langsung login.
+     */
+    public function verifyOtpGoogle(Request $request)
+    {
+        $data = Session::get('google_registration_data');
+
+        if (!$data) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi registrasi Google habis. Silakan ulangi proses dari awal.'
+            ]);
+        }
+
+        if ($request->otp != $data['otp']) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP salah.']);
+        }
+
+        if (now()->gt(\Carbon\Carbon::parse($data['otp_expires']))) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP telah kedaluwarsa.']);
+        }
+
+        try {
+            // Buat akun dengan google_id, tanpa password
+            $user = Pengguna::create([
+                'nama'          => $data['nama'],
+                'email'         => $data['email'],
+                'google_id'     => $data['google_id'],
+                'hp'            => $data['hp'],
+                'password_hash' => null,
+                'role'          => 'pendaftar',
+                'aktif'         => true,
+            ]);
+
+            // Langsung login
+            Auth::guard('pengguna')->login($user);
+
+            // Catat log aktivitas
+            LogAktivitas::create([
+                'user_id'    => $user->id,
+                'aksi'       => 'register_and_login',
+                'objek'      => 'auth',
+                'objek_data' => [
+                    'metode'     => 'google',
+                    'ip'         => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'role'       => $user->role,
+                ],
+                'waktu' => now(),
+                'ip'    => $request->ip(),
+            ]);
+
+            // Bersihkan semua session registrasi Google
+            Session::forget(['google_register', 'google_registration_data']);
+
+            return response()->json([
+                'success'  => true,
+                'message'  => 'Registrasi berhasil! Selamat datang, ' . $user->nama . '!',
+                'redirect' => route('pendaftar.dashboard'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[Google OTP] Gagal buat akun: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat akun: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Kirim ulang OTP untuk registrasi via Google.
+     */
+    public function resendOtpGoogle(Request $request)
+    {
+        $data = Session::get('google_registration_data');
+
+        if (!$data) {
+            return response()->json(['success' => false, 'message' => 'Data registrasi Google tidak ditemukan.']);
+        }
+
+        $otp = rand(100000, 999999);
+        $data['otp']         = $otp;
+        $data['otp_expires'] = now()->addMinutes(5);
+        Session::put('google_registration_data', $data);
+
+        try {
+            Mail::send('emails.otp', ['otp' => $otp, 'nama' => $data['nama']], function ($message) use ($data) {
+                $message->to($data['email'])->subject('Kode OTP Registrasi SPMB via Google (Kirim Ulang)');
+            });
+
+            $message = 'Kode OTP baru telah dikirim ke ' . $data['email'];
+            if (config('mail.default') === 'log') {
+                $message = 'Testing Mode - OTP Baru: ' . $otp;
+            }
+
+            return response()->json(['success' => true, 'message' => $message]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal mengirim ulang OTP.']);
+        }
+    }
 }

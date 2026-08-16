@@ -20,6 +20,20 @@ Route::post('/register/send-otp', [App\Http\Controllers\Auth\OtpController::clas
 Route::post('/register/verify-otp', [App\Http\Controllers\Auth\OtpController::class, 'verifyOtp']);
 Route::post('/register/resend-otp', [App\Http\Controllers\Auth\OtpController::class, 'resendOtp']);
 
+// Google OTP routes (registrasi via Google)
+Route::post('/register/google/send-otp', [App\Http\Controllers\Auth\OtpController::class, 'sendOtpGoogle'])->name('register.google.send-otp');
+Route::post('/register/google/verify-otp', [App\Http\Controllers\Auth\OtpController::class, 'verifyOtpGoogle'])->name('register.google.verify-otp');
+Route::post('/register/google/resend-otp', [App\Http\Controllers\Auth\OtpController::class, 'resendOtpGoogle'])->name('register.google.resend-otp');
+
+// Google OAuth routes
+Route::get('/auth/google', [App\Http\Controllers\Auth\GoogleController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('/auth/google/callback', [App\Http\Controllers\Auth\GoogleController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+
+// Google OTP verification (setelah registrasi baru via Google)
+Route::get('/auth/google/verify-otp', [App\Http\Controllers\Auth\GoogleController::class, 'showOtpVerify'])->name('google.otp.verify');
+Route::post('/auth/google/verify-otp', [App\Http\Controllers\Auth\GoogleController::class, 'verifyOtp'])->name('google.otp.verify.post');
+Route::post('/auth/google/resend-otp', [App\Http\Controllers\Auth\GoogleController::class, 'resendOtp'])->name('google.otp.resend');
+
 // Logout route
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 

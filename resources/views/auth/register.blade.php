@@ -20,11 +20,10 @@
             </div>
 
             <div class="card-body p-4 p-md-5">
-              <!-- Tab Navigation -->
-
 
               @if($errors->any())
-                <div class="alert alert-danger">
+                <div class="alert alert-danger border-0 shadow-sm">
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i>
                   @foreach($errors->all() as $error)
                     <div>{{ $error }}</div>
                   @endforeach
@@ -102,6 +101,26 @@
                           style="display: none;"></span>
                       </button>
 
+                      {{-- Divider --}}
+                      <div class="d-flex align-items-center my-3">
+                        <hr class="flex-grow-1">
+                        <span class="px-3 text-muted small">atau daftar dengan</span>
+                        <hr class="flex-grow-1">
+                      </div>
+
+                      {{-- Tombol Daftar dengan Google --}}
+                      <a href="{{ route('auth.google') }}"
+                         class="btn btn-outline-dark w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                          <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.8 6C12.4 13 17.8 9.5 24 9.5z"/>
+                          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.7 37.3 46.5 31.3 46.5 24.5z"/>
+                          <path fill="#FBBC05" d="M10.4 28.7A14.4 14.4 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.8-6z"/>
+                          <path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.4-5.7l-7.5-5.8c-2.1 1.4-4.8 2.3-7.9 2.3-6.2 0-11.5-4.2-13.4-9.9l-7.8 6C6.6 42.6 14.6 48 24 48z"/>
+                          <path fill="none" d="M0 0h48v48H0z"/>
+                        </svg>
+                        <span>Daftar dengan Google</span>
+                      </a>
+
                       <a href="{{ route('home') }}" class="btn btn-outline-secondary w-100 mb-3">
                         <i class="bi bi-arrow-left me-2"></i>Kembali ke Beranda
                       </a>
@@ -111,8 +130,7 @@
                           <a href="{{ route('login') }}" class="fw-semibold text-decoration-none"
                             style="color: #0074b7;">Login di sini</a>
                         </p>
-                      </div>
-                    </form>
+                      </div>                    </form>
                   </div>
 
                   <!-- Step 2: OTP Verification -->
@@ -165,6 +183,9 @@
                           <button type="button" id="backToStep1" class="btn btn-link" style="color: #0074b7;">
                             <i class="bi bi-arrow-left me-2"></i>Kembali ke form
                           </button>
+                          <a href="{{ route('home') }}" class="btn btn-link text-muted d-block">
+                            <i class="bi bi-house-fill me-1"></i>Kembali ke Beranda
+                          </a>
                         </div>
                       </div>
                     </form>
@@ -318,6 +339,7 @@
     </div>
 
     <script>
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
       let otpTimer = 0;
       let otpInterval;
 
@@ -326,13 +348,8 @@
         const form = document.getElementById('registerForm');
         const formData = new FormData(form);
 
-        // Validate form
-        if (!form.checkValidity()) {
-          form.reportValidity();
-          return;
-        }
+        if (!form.checkValidity()) { form.reportValidity(); return; }
 
-        // Show loading
         document.getElementById('sendOtpText').style.display = 'none';
         document.getElementById('sendOtpSpinner').style.display = 'inline-block';
         this.disabled = true;
@@ -340,77 +357,61 @@
         fetch('/register/send-otp', {
           method: 'POST',
           body: formData,
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept': 'application/json'
+          headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        })
+        .then(async response => {
+          const data = await response.json();
+          if (!response.ok) {
+            if (response.status === 422) {
+              let errorMsg = 'Validasi Gagal:\n';
+              for (let key in data.errors) errorMsg += '- ' + data.errors[key][0] + '\n';
+              throw new Error(errorMsg);
+            }
+            throw new Error(data.message || 'Terjadi kesalahan pada server');
+          }
+          return data;
+        })
+        .then(data => {
+          if (data.success) {
+            document.getElementById('emailDisplay').textContent = formData.get('email');
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            startResendTimer();
+          } else {
+            alert(data.message || 'Gagal mengirim OTP');
           }
         })
-          .then(async response => {
-            const data = await response.json();
-            if (!response.ok) {
-              if (response.status === 422) {
-                let errorMsg = 'Validasi Gagal:\n';
-                for (let key in data.errors) {
-                  errorMsg += '- ' + data.errors[key][0] + '\n';
-                }
-                throw new Error(errorMsg);
-              }
-              throw new Error(data.message || 'Terjadi kesalahan pada server');
-            }
-            return data;
-          })
-          .then(data => {
-            if (data.success) {
-              document.getElementById('emailDisplay').textContent = formData.get('email');
-              document.getElementById('step1').style.display = 'none';
-              document.getElementById('step2').style.display = 'block';
-              startResendTimer();
-            } else {
-              alert(data.message || 'Gagal mengirim OTP');
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
-          })
-          .finally(() => {
-            document.getElementById('sendOtpText').style.display = 'inline';
-            document.getElementById('sendOtpSpinner').style.display = 'none';
-            this.disabled = false;
-          });
+        .catch(error => alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.'))
+        .finally(() => {
+          document.getElementById('sendOtpText').style.display = 'inline';
+          document.getElementById('sendOtpSpinner').style.display = 'none';
+          this.disabled = false;
+        });
       });
 
       // OTP Input handling
       document.querySelectorAll('.otp-input').forEach((input, index) => {
         input.addEventListener('input', function () {
-          if (this.value.length === 1 && index < 5) {
+          if (this.value.length === 1 && index < 5)
             document.querySelectorAll('.otp-input')[index + 1].focus();
-          }
           updateOtpValue();
         });
-
         input.addEventListener('keydown', function (e) {
-          if (e.key === 'Backspace' && this.value === '' && index > 0) {
+          if (e.key === 'Backspace' && this.value === '' && index > 0)
             document.querySelectorAll('.otp-input')[index - 1].focus();
-          }
         });
       });
 
       function updateOtpValue() {
-        const otp = Array.from(document.querySelectorAll('.otp-input')).map(input => input.value).join('');
-        document.getElementById('otpValue').value = otp;
+        document.getElementById('otpValue').value =
+          Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('');
       }
 
       // Verify OTP
       document.getElementById('verifyOtpBtn').addEventListener('click', function () {
         const otp = document.getElementById('otpValue').value;
+        if (otp.length !== 6) { alert('Masukkan kode OTP 6 digit'); return; }
 
-        if (otp.length !== 6) {
-          alert('Masukkan kode OTP 6 digit');
-          return;
-        }
-
-        // Show loading
         document.getElementById('verifyOtpText').style.display = 'none';
         document.getElementById('verifyOtpSpinner').style.display = 'inline-block';
         this.disabled = true;
@@ -421,92 +422,58 @@
         fetch('/register/verify-otp', {
           method: 'POST',
           body: registerData,
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept': 'application/json'
+          headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        })
+        .then(async response => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Terjadi kesalahan');
+          return data;
+        })
+        .then(data => {
+          if (data.success) {
+            alert(data.message || 'Registrasi berhasil!');
+            window.location.href = data.redirect || '/home';
+          } else {
+            alert(data.message || 'Kode OTP salah');
           }
         })
-          .then(async response => {
-            const data = await response.json();
-            if (!response.ok) {
-              if (response.status === 422) {
-                let errorMsg = 'Validasi Gagal:\n';
-                for (let key in data.errors) {
-                  errorMsg += '- ' + data.errors[key][0] + '\n';
-                }
-                throw new Error(errorMsg);
-              }
-              throw new Error(data.message || 'Terjadi kesalahan pada server');
-            }
-            return data;
-          })
-          .then(data => {
-            if (data.success) {
-              alert(data.message || 'Registrasi berhasil!');
-              window.location.href = data.redirect || '/home';
-            } else {
-              alert(data.message || 'Kode OTP salah');
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
-          })
-          .finally(() => {
-            document.getElementById('verifyOtpText').style.display = 'inline';
-            document.getElementById('verifyOtpSpinner').style.display = 'none';
-            this.disabled = false;
-          });
+        .catch(error => alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.'))
+        .finally(() => {
+          document.getElementById('verifyOtpText').style.display = 'inline';
+          document.getElementById('verifyOtpSpinner').style.display = 'none';
+          this.disabled = false;
+        });
       });
 
       // Resend OTP
       document.getElementById('resendOtpBtn').addEventListener('click', function () {
-        const formData = new FormData(document.getElementById('registerForm'));
-
         fetch('/register/resend-otp', {
           method: 'POST',
-          body: formData,
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept': 'application/json'
-          }
+          body: new FormData(document.getElementById('registerForm')),
+          headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
         })
-          .then(async response => {
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Terjadi kesalahan pada server');
-            return data;
-          })
-          .then(data => {
-            if (data.success) {
-              alert('Kode OTP baru telah dikirim');
-              startResendTimer();
-            } else {
-              alert(data.message || 'Gagal mengirim ulang OTP');
-            }
-          })
-          .catch(error => {
-            alert(error.message || 'Gagal mengirim ulang OTP');
-          });
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) { alert('Kode OTP baru telah dikirim'); startResendTimer(); }
+          else alert(data.message || 'Gagal mengirim ulang OTP');
+        })
+        .catch(() => alert('Gagal mengirim ulang OTP'));
       });
 
-      // Back to step 1
       document.getElementById('backToStep1').addEventListener('click', function () {
         document.getElementById('step2').style.display = 'none';
         document.getElementById('step1').style.display = 'block';
         clearInterval(otpInterval);
       });
 
-      // Resend timer
       function startResendTimer() {
         otpTimer = 60;
         document.getElementById('resendOtpBtn').disabled = true;
         document.getElementById('resendText').style.display = 'none';
         document.getElementById('resendCountdown').style.display = 'inline';
-
         otpInterval = setInterval(() => {
           document.getElementById('resendCountdown').textContent = `Kirim ulang dalam ${otpTimer}s`;
           otpTimer--;
-
           if (otpTimer < 0) {
             clearInterval(otpInterval);
             document.getElementById('resendOtpBtn').disabled = false;
@@ -516,21 +483,18 @@
         }, 1000);
       }
 
-      // Password Toggle Visibility
       document.getElementById('togglePassword').addEventListener('click', function () {
-        const passwordInput = document.getElementById('password');
+        const p = document.getElementById('password');
         const icon = document.getElementById('togglePasswordIcon');
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', type);
+        p.setAttribute('type', p.type === 'password' ? 'text' : 'password');
         icon.classList.toggle('bi-eye-fill');
         icon.classList.toggle('bi-eye-slash-fill');
       });
 
       document.getElementById('togglePasswordConfirm').addEventListener('click', function () {
-        const passwordConfirmInput = document.getElementById('password_confirmation');
+        const p = document.getElementById('password_confirmation');
         const icon = document.getElementById('togglePasswordConfirmIcon');
-        const type = passwordConfirmInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordConfirmInput.setAttribute('type', type);
+        p.setAttribute('type', p.type === 'password' ? 'text' : 'password');
         icon.classList.toggle('bi-eye-fill');
         icon.classList.toggle('bi-eye-slash-fill');
       });

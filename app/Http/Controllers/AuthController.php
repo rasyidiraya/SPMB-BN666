@@ -81,7 +81,7 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    // Proses registrasi user baru (tanpa OTP)
+    // Proses registrasi user baru via form biasa (dengan OTP)
     public function registrasi(Request $request)
     {
         // Validasi input form registrasi
